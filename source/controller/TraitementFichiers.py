@@ -69,17 +69,19 @@ def main():
 	#on prépare les morceaux pour le RNN
 	liste_textes = []
 	for m in listeMorceaux:
-		if(m.format == 1 and m.nbTracks > 1 ):
-			if (parametres["TypeGeneration"] == "Rythme seulement"):
-				nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename+".format"
-				content = m.preparer_track_rythme(2)
-				ecrire_fichier(nom, [content]) #on récupère la piste 2 du morceau
-				liste_textes.append(content)
-			if (parametres["TypeGeneration"] == "Rythme et mélodie"):
-				nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename+".format"
-				content = m.preparer_track(2)
-				ecrire_fichier(nom, [content]) #on récupère la piste 2 du morceau
-				liste_textes.append(content)
+		if (parametres["TypeGeneration"] == "Rythme seulement"):
+			nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename+
+			content = m.preparer_track_rythme() #on récupère toutes les pistes du morceau dans une liste
+			for index in range(len(content)):
+				savename = nom+"-"+str(index)+".format"
+				ecrire_fichier(savename, content[index]) #on écrit chaque piste dans un fichier différent
+			liste_textes += content # on rajoute tous les rythmes à la liste d'entraînement du RNN
+		
+		if (parametres["TypeGeneration"] == "Rythme et mélodie"):
+			nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename+".format"
+			content = m.preparer_track() # on récupère toutes les pistes du morceau
+			ecrire_fichier(nom, [content]) # on écrit tout dans un seul morceau
+			liste_textes.append(content) # on rajoute la mélodie à la liste d'entraînement du RNN
 
 	#Bloc 6
 	for m in listeFichiersConvertis:
