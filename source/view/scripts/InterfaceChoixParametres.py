@@ -79,7 +79,6 @@ class Menu(tkinter.Frame):
         self.entry_text.set(os.getcwd()+os.sep+"data"+os.sep+"midi")
 
         
-                
 
         #Barre de Menu
         self.menubarre = tkinter.Menu(self.master)
@@ -95,7 +94,6 @@ class Menu(tkinter.Frame):
         #Traitement affichage chemin
         self.affichageChemin = tkinter.StringVar()
         self.affichageChemin.set(self.entry_text.get())
-        #self.affichageChemin.set(self.traitementAffichage(self.entry_text.get(),29))
         
         #Placement de la zone et affectation d'un texte dans cette zone d'affichage
         self.usr_input = tkinter.Entry(self, state='readonly', text=self.affichageChemin, width =25)
@@ -209,11 +207,8 @@ class Menu(tkinter.Frame):
         tkinter.Label(self, text="(1-2000)", bg="white").grid(row=13, column=1, sticky="e")
 
         #utilisation batch
-        varUseBa = tkinter.StringVar(self)
-        varUseBa.set("True")
         tkinter.Label(self, text="Utiliser batch",height = hauteurBout,  font = self.texte, bg='white').grid(row = 14, column =0, sticky="W")
         #Bouton utilisation du batch
-        #self.boolBatch = tkinter.Spinbox(self, values = ("True", "False"), width=10, textvariable=varUseBa, state=tkinter.DISABLED)
         self.boolBatch = tkinter.ttk.Combobox(self, values = ["True","False"],state=tkinter.DISABLED)
         #Réglage de l'item actuel sur 0
         self.boolBatch.current(0)
@@ -325,9 +320,8 @@ class Menu(tkinter.Frame):
         
     #Méthode pour l'explorateur de fichier
     def Browser(self):
-        filename = tkinter.filedialog.askdirectory() #initialdir = "."+os.sep+"project2020-2021"+os.sep+"files"+os.sep+"midi"+os.sep) #USELESS ?
-        
-        print("Filename is "+filename)
+        filename = tkinter.filedialog.askdirectory().replace("/", os.sep)
+        print("Selected Filename is "+filename)
         self.affichageChemin.set(self.traitementAffichage(filename,20))
         self.entry_text.set(filename)
 
@@ -340,7 +334,6 @@ class Menu(tkinter.Frame):
         pageCredit.title("Credits")
         centrefenetre(pageCredit)
         texte = "Créé par:\nAntoine Escriva\nFlorian Bossard\nClément Guérin\nRaphaël Garnier\nClément Bruschini"
-        #tkinter.Label(pageCredit, text=texte, bg="white", relief = tkinter.RAISED).grid(row=0, column=0, sticky="EW")
         tkinter.Message(pageCredit, text=texte, bg="white", relief = tkinter.RAISED, anchor = 'w', width =200).pack(fill = tkinter.X)
         tkinter.Button(pageCredit,text="Ok", width=10,bg="white",command= pageCredit.destroy).pack(fill = tkinter.X)
     
@@ -355,24 +348,20 @@ class Menu(tkinter.Frame):
         tkinter.Message(pageAbout, text=text, bg="white", relief = tkinter.RAISED, width=450).pack(fill = tkinter.X)
         tkinter.Button(pageAbout,text="Ok", bg="white",command= pageAbout.destroy, width=10).pack(fill = tkinter.X)
         
-    
-####################################################### 
 ####################################################### 
 
-##Ci-dessous, deux fonctions copiées collées de Google pour centrer la fenêtre au milieu de l'écran
-#Récupère les infos relatives à l'écran
+# Récupère les infos relatives à l'écran
 def geoliste(g):
     r=[i for i in range(0,len(g)) if not g[i].isdigit()]
     return [int(g[0:r[0]]),int(g[r[0]+1:r[1]]),int(g[r[1]+1:r[2]]),int(g[r[2]+1:])]
 
-#Centre la fenetre au milieu de l'écran
+# fonctions pour centrer la fenêtre au milieu de l'écran
 def centrefenetre(fen):
     fen.update_idletasks()
     l,h,x,y=geoliste(fen.geometry())
     fen.geometry("%dx%d%+d%+d" % (l,h,(fen.winfo_screenwidth()-l)//2,(fen.winfo_screenheight()-h)//2))
 
 ##############################################################################################################
-##############################################################################################################  
 
 
 def start():
