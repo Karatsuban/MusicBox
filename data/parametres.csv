@@ -1,0 +1,2 @@
+URL_Dossier,NombreMorceaux,DureeMorceaux,TonaliteMorceaux,VitesseMorceaux,TypeGeneration,TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,LongeurSequence,BatchBool,NombreSequenceBatch
+C:/Users/Rafiki/Desktop/Ecole Ingé/2eme annee/PROJET/Musique/project2020-2021-main/data/midi,1,60,A,30,Rythme seulement,0.010,200,512,1,200,True,16
