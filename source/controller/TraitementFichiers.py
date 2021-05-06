@@ -27,8 +27,7 @@ def get_rnn_parameters(parametres):
     return p
 
 
-def main():
-    parametres = iep.importFromCSV()
+def main(parametres):
     rnn_parametres = get_rnn_parameters(parametres)
     
     #Bloc 1
