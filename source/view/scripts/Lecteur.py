@@ -150,6 +150,7 @@ class Lecteur(tkinter.Frame):
         self.URL = self.parametres["URL_Dossier"]+os.sep+"Resultat"+os.sep
         print("Lecteur.initLecteur, self.URL = ",self.URL)
 
+
         self.listeMusiques = os.listdir(self.URL)
         print("Lecteur.initLecteur, self.listeMusiques = ", self.listeMusiques)
 

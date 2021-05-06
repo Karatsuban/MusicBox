@@ -58,16 +58,15 @@ class Application(tkinter.Tk):
         if("parametres.csv" in path):
             self.parametres = ImportExportParametres.importFromCSV()
 
+        os.makedirs(self.parametres["URL_Dossier"]+os.sep+"Resultat",exist_ok=True) # on crée le dossier Resultat s'il n'existe pas
 
         self.fenetreMenu = Menu.Menu(self, self.parametres)
         self.fenetreLecteur = Lecteur.Lecteur(self, self.parametres)
 
         self.frame = self.fenetreLecteur
 
-
         #Appel de la methode switch_frame qui se situe ci-dessous
         self.switch_frame()
-
 
 
     #Cette méthode permet de supprimer le cadre actuel dans la fenetre principale par frame_class
@@ -76,22 +75,33 @@ class Application(tkinter.Tk):
         self.frame.grid_remove()
 
         if(self.frame == self.fenetreMenu):
-            self.frame = self.fenetreLecteur
-            taille = self.tailleLecteur
-            self.parametres = self.fenetreMenu.getParametres()
-            print(self.parametres)
-            self.fenetreLecteur.miseAJourRepertoire(self.parametres)
+                self.frame = self.fenetreLecteur
+                taille = self.tailleLecteur
+                self.parametres = self.fenetreMenu.getParametres()
+                print(self.parametres)
+                self.fenetreLecteur.miseAJourRepertoire(self.parametres)
+                self.popupmsg("Il n'y a pas de morceau à afficher !")
         else:
             self.frame = self.fenetreMenu
             taille = self.tailleMenu
-        
+            
         #Réglage de la taille de la fenêtre
         self.geometry(taille)
         
         #Affectation du cadre à la fenetre
-
         #Réglage des marges
         self.frame.grid(padx = 20, pady = 15, sticky = "ewsn")
+
+    def popupmsg(self, texte):
+        popup = tkinter.Tk()
+        centrefenetre(popup)
+        popup.title("Erreur")
+        popup.config(bg="white")
+        label = tkinter.Label(popup, text=texte, bg="white")
+        popup.geometry("315x120")
+        label.pack(side="top", fill="x", pady=10)
+        ok = tkinter.Button(popup, text="Ok", bg="white", command = popup.destroy, width=10)
+        ok.pack()
 
 
         
