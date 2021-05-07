@@ -12,13 +12,6 @@ import os
 if(os.name != "posix"):
     from ctypes import windll
 
-largeurBout = 15
-hauteurBout = 2
-margeX = 0
-margeY = 0
-
-
-
 
 #######################################################
 #Classe mère de l'interface
@@ -34,7 +27,7 @@ class Application(tkinter.Tk):
         self.configure(bg='white')
 
 
-        self.tailleLecteur = "525x300"
+        self.tailleLecteur = "525x285"
         self.tailleMenu = "525x775"
 
         ########################################################################
@@ -55,41 +48,39 @@ class Application(tkinter.Tk):
                                 "NombreSequenceBatch": "16"}
         
         path = os.listdir(path=os.getcwd() + os.sep + "data")
-        if("parametres.csv" in path):
-            self.parametres = ImportExportParametres.importFromCSV()
 
-        os.makedirs(self.parametres["URL_Dossier"]+os.sep+"Resultat",exist_ok=True) # on crée le dossier Resultat s'il n'existe pas
+        if("parametres.csv" in path): #si un fichier de configuration existe
+            self.parametres = ImportExportParametres.importFromCSV() # on le charge dans self.parametres
 
+        # on crée le dossier Resultat s'il n'existe pas
+        os.makedirs(self.parametres["URL_Dossier"]+os.sep+"Resultat",exist_ok=True)
+
+        # Création des objets Menu et Lecteur
         self.fenetreMenu = Menu.Menu(self, self.parametres)
         self.fenetreLecteur = Lecteur.Lecteur(self, self.parametres)
 
+        # frame de base
         self.frame = self.fenetreLecteur
 
-        #Appel de la methode switch_frame qui se situe ci-dessous
         self.switch_frame()
 
 
-    #Cette méthode permet de supprimer le cadre actuel dans la fenetre principale par frame_class
+    #Cette méthode permet de changer la fame affichée dans la fenetre principale
     def switch_frame(self):
-        #on cache la frame actuelle
-        self.frame.grid_remove()
+        self.frame.grid_remove() #on cache la frame actuelle
 
         if(self.frame == self.fenetreMenu):
                 self.frame = self.fenetreLecteur
                 taille = self.tailleLecteur
-                self.parametres = self.fenetreMenu.getParametres()
-                print(self.parametres)
-                self.fenetreLecteur.miseAJourRepertoire(self.parametres)
-                self.popupmsg("Il n'y a pas de morceau à afficher !")
+                self.parametres = self.fenetreMenu.getParametres() # on récupère les paramètres mis à jour par fenetreMenu
+                self.fenetreLecteur.miseAJourRepertoire(self.parametres) # on les transmet à l'objet fenetreLecteur
         else:
             self.frame = self.fenetreMenu
             taille = self.tailleMenu
             
-        #Réglage de la taille de la fenêtre
-        self.geometry(taille)
+        self.geometry(taille) #Réglage de la taille de la fenêtre
         
-        #Affectation du cadre à la fenetre
-        #Réglage des marges
+        #Affectation du cadre à la fenetre et réglage des marges
         self.frame.grid(padx = 20, pady = 15, sticky = "ewsn")
 
     def popupmsg(self, texte):
@@ -116,7 +107,7 @@ def geoliste(g):
 def centrefenetre(fen):
     fen.update_idletasks()
     l,h,x,y=geoliste(fen.geometry())
-    fen.geometry("%dx%d%+d%+d" % (l,h,(fen.winfo_screenwidth()-l)//2,(fen.winfo_screenheight()-h)//2))
+    fen.geometry("%dx%d%+d%+d" % (l,h,(fen.winfo_screenwidth()//2-l)//2,(fen.winfo_screenheight()-h)//2))
 
 ##############################################################################################################
 
