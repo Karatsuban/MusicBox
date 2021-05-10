@@ -10,7 +10,7 @@ class Morceau:
     def __init__(self, path):
         
         self.path = path
-        self.filename = None
+        self.filename = self.path.split(os.sep)[-1]
 
         # Header information
         self.format = None
@@ -41,32 +41,14 @@ class Morceau:
         self.trackList = []
 
         # Dictionnaire temps vers note et liste des notes
-        time_to_note_dict = None
+        self.time_to_note_dict = None
         self.liste_notes = []
 
-        self.get_info()
+        if not ".csv" in self.filename:
+            print("Erreur :  format invalide (.csv expected, .{} got)".format(self.filename.split('.')[-1]))
+        else:
+            self.get_info()
         
-
-    def conversion(self, name_in):
-        split_path = self.path.split(os.sep)
-        self.filename = split_path[-1].replace(".mid","")
-
-        #convertit un fichier .mid en fichier .csv
-        if not ".mid" in name_in:
-            #Error : Incorrect input format
-            return None
-                    
-        csv_list = pm.midi_to_csv(name_in) #midi to csv
-        name_out = name_in.replace(".mid",".csv")
-
-        csv_list = pm.midi_to_csv(name_in) #transformation de midi en csv
-        name_out = name_in.replace(self.filename+".mid","CSV"+os.sep+ self.filename + ".csv")
-
-        # ecriture du fichier
-        with open(name_out, 'w+') as file_out :
-            for row in csv_list:
-                file_out.write(row)
-        return name_out # on renvoie le nom du nouveau fichier crée
 
     def __str__(self):
         return "\nFILE INFO :\nfilename =\t{0}\nformat =\t{1}\nnbTracks =\t{2}\ndivision =\t{3}\n\nSMPTE INFO :\nsmpteHour =\t{4}\nsmpteMinute =\t{5}\nsmpteSecond =\t{6}\nsmpteFrame =\t{7}\nsmpteFracFrame = {8}\n\nTIME SIGNATURE INFO :\ntsNum =\t\t{9}\ntsDenom =\t{10}\ntsClick =\t{11}\ntsNotesQ =\t{12}\n\nKEY SIGNATURE INFO :\nself.ksKey =\t{13}\nself.ksMinMaj =\t{14}".format(self.path,
@@ -86,20 +68,14 @@ class Morceau:
                         self.ksMinMaj)
 
     def get_info(self):
-        nom_fichier = self.conversion(self.path)
-        if nom_fichier == None:
-            print("Error : invalid filename extension")
+        file = open(self.path, 'r') #ouverture du fichier
+        lines = file.readlines() #lecture des lignes
+        file.close() #fermetures du fichier
+        rest = self.get_header(lines) # on récupère toutes les lignes autres que le header
+        if rest == None:
+            print("Error : No Header found\n")
         else:
-            self.path = nom_fichier #on enregistre le nouveau nom du fichier
-
-            file = open(self.path, 'r') #ouverture du fichier
-            lines = file.readlines() #lecture des lignes
-            file.close() #fermetures du fichier
-            rest = self.get_header(lines) # on récupère toutes les lignes autres que le header
-            if rest == None:
-                print("Error : No Header found\n")
-            else:
-                self.get_tracks(rest)
+            self.get_tracks(rest)
 
     def get_header(self, lines):
         header = lines[0].upper()
@@ -202,6 +178,33 @@ class Morceau:
         note = self.liste_notes[l.index(min(l))]
         return note
 
+
+
+    def get_notes(self, quantif=False):
+        #renvoie toutes les notes présentes dans le morceau (non ordonnées)
+        notesListe = []
+        for piste in range(self.nbTracks):
+            L = self.get_track(piste)
+            while L != []:
+                line1 = L[0].split(",")
+                time1 = int(line1[1]) #récupération Time
+                note = int(line1[4]) #récupération n° touche
+
+                b=0
+                line2 = [-1,-1,-1,-1,-1]
+                while int(line2[4]) != note :
+                    b += 1
+                    line2 = L[b].split(",")
+
+                time2 = int(line2[1]) # récupération deuxième temps
+                duree = time2-time1
+                if quantif:
+                    duree = self.arrondi_note(duree)
+                L = L[1:b]+L[b+1:] # on enleve les deux lignes
+            notesListe.append(duree)
+        return duree
+
+
 #********************************************************************************** 
 
     def preparer_track_rythme_select(self, numero):
@@ -297,9 +300,10 @@ class Morceau:
         midi_object = pm.csv_to_midi(csv_path)
         
         if(save_name !="default"):
-            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+save_name).replace(".csv", "-généré.mid")
+            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+save_name+".mid")
         else:
-            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+self.filename).replace(".csv","-généré.mid")
+            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+self.filename+".mid")
+
 
         # Save the parsed MIDI file to disk
         with open(name_out, "wb") as output_file:
@@ -422,9 +426,9 @@ class Morceau:
         midi_object = pm.csv_to_midi(csv_path)
 
         if(save_name !="default"):
-            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+save_name).replace(".csv", "-généré.mid")
+            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+save_name+".mid")
         else:
-            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+self.filename).replace(".csv","-généré.mid")
+            name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+self.filename+".mid")
 
            
         # Save the parsed MIDI file to disk
