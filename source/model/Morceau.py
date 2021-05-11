@@ -183,7 +183,7 @@ class Morceau:
     def get_notes(self, quantif=False):
         #renvoie toutes les notes présentes dans le morceau (non ordonnées)
         notesListe = []
-        for piste in range(self.nbTracks):
+        for piste in range(1, self.nbTracks+1):
             L = self.get_track(piste)
             while L != []:
                 line1 = L[0].split(",")
@@ -201,8 +201,8 @@ class Morceau:
                 if quantif:
                     duree = self.arrondi_note(duree)
                 L = L[1:b]+L[b+1:] # on enleve les deux lignes
-            notesListe.append(duree)
-        return duree
+                notesListe.append(duree)
+        return notesListe
 
 
 #********************************************************************************** 
