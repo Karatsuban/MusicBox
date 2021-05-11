@@ -75,14 +75,21 @@ def dessine_graphe(readpath, filename, savepath):
 	notes_quantif = morceau.get_notes(True)
 	x1 = set(notes_non_quantif)
 	x2 = set(notes_quantif)
+	print(x1)
+	print(x2)
 	X = list(x1.union(x2)) # abscisse du graphe
 	X.sort()
+	print(X)
+
 	y1 = [notes_non_quantif.count(k) for k in X]
 	y2 = [notes_quantif.count(k) for k in X]
+
+	print(y1)
+	print(y2)
 	
 	pos = range(len(X))
 	rects1 = plt.bar(x=[x+0.2 for x in pos], height=y1, width=0.4, color='red', label="Notes non quantifiees")
-	rects2 = plt.bar(x=[x+0.6 for x in pos], height=y1, width=0.4, color='green', label="Notes quantifiees")
+	rects2 = plt.bar(x=[x+0.6 for x in pos], height=y2, width=0.4, color='green', label="Notes quantifiees")
 	plt.ylabel("Nombre")
 	plt.xlabel("Duree notes")
 	plt.title("Comparaison notes sur "+filename)
@@ -96,6 +103,7 @@ def dessine_graphe(readpath, filename, savepath):
 		height = rect.get_height()
 		plt.text(rect.get_x() + rect.get_width() / 2 + 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
 
+	plt.legend(loc="upper right")
 	plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
 
 #######################################################
