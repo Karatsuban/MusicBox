@@ -6,6 +6,8 @@ from source.model import RNN, Morceau
 import py_midicsv as pm
 import operator
 import os
+import matplotlib.pyplot as plt
+import matplotlib
 
 def lire_fichier(nom):
     file = open(nom, 'r')
@@ -63,6 +65,39 @@ def count_long_seq(string):
 def moyenne_seq(nbT, nbF):
     moyenneSeq = nbT / nbF
     return moyenneSeq
+
+
+
+def dessine_graphe(readpath, filename, savepath):
+	plt.clf()
+	morceau = Morceau.Morceau(readpath+os.sep+filename)
+	notes_non_quantif = morceau.get_notes()
+	notes_quantif = morceau.get_notes(True)
+	x1 = set(notes_non_quantif)
+	x2 = set(notes_quantif)
+	X = list(x1.union(x2)) # abscisse du graphe
+	X.sort()
+	y1 = [notes_non_quantif.count(k) for k in X]
+	y2 = [notes_quantif.count(k) for k in X]
+	
+	pos = range(len(X))
+	rects1 = plt.bar(x=[x+0.2 for x in pos], height=y1, width=0.4, color='red', label="Notes non quantifiees")
+	rects2 = plt.bar(x=[x+0.6 for x in pos], height=y1, width=0.4, color='green', label="Notes quantifiees")
+	plt.ylabel("Nombre")
+	plt.xlabel("Duree notes")
+	plt.title("Comparaison notes sur "+filename)
+	plt.xticks([index + 0.4 for index in pos], X)
+
+	for rect in rects1:
+		height = rect.get_height()
+		plt.text(rect.get_x() + rect.get_width() / 2 - 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
+
+	for rect in rects2:
+		height = rect.get_height()
+		plt.text(rect.get_x() + rect.get_width() / 2 + 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
+
+	plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
+
 #######################################################
 
 def main(parametres):
@@ -75,6 +110,7 @@ def main(parametres):
     os.makedirs(parametres["URL_Dossier"]+os.sep+"Conversion_rythme",exist_ok=True)
     os.makedirs(parametres["URL_Dossier"]+os.sep+"Conversion_melodie",exist_ok=True)
     os.makedirs(parametres["URL_Dossier"]+os.sep+"Resultat",exist_ok=True)
+    os.makedirs(parametres["URL_Dossier"]+os.sep+"Graphiques",exist_ok=True)
 
     # on récupère tous les fichier csv du dossier csv avec addresse: csv_path
     csv_path = parametres["URL_Dossier"] + os.sep + "CSV"
@@ -85,6 +121,10 @@ def main(parametres):
         nom = midi_files.replace(".mid", ".csv")
         if nom not in os.listdir(csv_path):
             conversion_en_csv(csv_path, parametres["URL_Dossier"], midi_files)
+
+    for fichier_csv in os.listdir(csv_path): #on parcourt les fichiers csv
+        dessine_graphe(csv_path, fichier_csv, parametres["URL_Dossier"]+os.sep+"Graphiques")
+
 
     # Bloc 3
     # on récupère tous les fichiers .format dans listeFichiersConvertis
@@ -114,6 +154,7 @@ def main(parametres):
         # on tranforme les fichiers csv non convertis en objets Morceau
         for csv_files in listeFichiersAConvertir:
             listeMorceaux.append(Morceau.Morceau(csv_path + os.sep + csv_files))
+
 
     #Bloc 5
     #on prépare les morceaux pour le RNN et afficher les info de data setting
