@@ -292,12 +292,7 @@ class Morceau:
 
         csv_notes_list += [end2, end_of_file]
 
-        csv_path = output_path
-        with open(csv_path, 'w+') as file_out :
-            for row in csv_notes_list:
-                file_out.write(row)
-
-        midi_object = pm.csv_to_midi(csv_path)
+        midi_object = pm.csv_to_midi(csv_notes_list)
         
         if(save_name !="default"):
             name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+save_name+".mid")
@@ -416,14 +411,7 @@ class Morceau:
 
         csv_notes_list += [end2, end_of_file]
 
-        csv_path = output_path
-
-        with open(csv_path, 'w+') as file_out :
-            for row in csv_notes_list:
-                file_out.write(row)
-
-                
-        midi_object = pm.csv_to_midi(csv_path)
+        midi_object = pm.csv_to_midi(csv_notes_list)
 
         if(save_name !="default"):
             name_out = output_path.replace("CSV"+os.sep+self.filename, "Resultat"+os.sep+save_name+".mid")
