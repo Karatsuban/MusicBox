@@ -2,11 +2,8 @@
 
 import tkinter
 import tkinter.filedialog
-import tkinter.font as tkFont
-from tkinter import ttk
 from source.view.scripts import Lecteur, Menu
-from source.controller import TraitementFichiers, ImportExportParametres
-import time
+from source.controller import ImportExportParametres
 import os
 
 if(os.name != "posix"):
