@@ -7,7 +7,6 @@ import py_midicsv as pm
 import operator
 import os
 import matplotlib.pyplot as plt
-import matplotlib
 
 def lire_fichier(nom):
     file = open(nom, 'r')
