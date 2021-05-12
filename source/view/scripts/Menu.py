@@ -3,9 +3,8 @@
 import tkinter
 import tkinter.filedialog
 import tkinter.font as tkFont
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from source.controller import TraitementFichiers, ImportExportParametres
-import time
 import os
 
 if(os.name != "posix"):
