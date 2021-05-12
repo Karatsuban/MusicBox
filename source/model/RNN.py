@@ -7,7 +7,7 @@ import numpy as np
 import time
 from math import ceil
 import random
-from matplotlib import pyplot as plt
+
 
 class RNN():
 
@@ -19,7 +19,7 @@ class RNN():
     self.len_hidden_dim = int(param_list[2])  # taille de la dimension cachée
     self.nb_layers = int(param_list[3])	      # nombre de couches
     self.seq_len = int(param_list[4])	        # longueur d'une séquence
-    self.is_batch = bool(param_list[5])     	# entraînement sous forme de batch ou non
+    self.is_batch = param_list[5]==str(True)     	# entraînement sous forme de batch ou non
     self.batch_len = int(param_list[6])	      # nombre de séquences dans un batch
     self.nb_morceaux = int(param_list[7])     # nombre de morceaux à produire
     self.duree_morceaux = int(param_list[8])  # longueur des morceaux 
@@ -288,7 +288,7 @@ class RNN():
 
     # Boucle d'entraînement
     t1 = time.time()
-    for epoch in range(1, self.nb_epochs):
+    for epoch in range(0, self.nb_epochs):
       self.optimizer.zero_grad() # on efface les gradients de l'entraînement précédent
       print("DEBUG : is_batch = ", self.is_batch)
       if (self.is_batch):
