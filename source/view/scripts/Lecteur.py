@@ -3,12 +3,10 @@
 
 import tkinter
 import tkinter.font as tkFont
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import pygame
-from PIL import Image,ImageTk
-
 import os
-from source.controller import ImportExportParametres as iep
+
 
 hauteurBout = 10
 largeurBout = 15
