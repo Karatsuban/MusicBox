@@ -3,7 +3,6 @@
 # Morceau.py 
 # extrait les données d'un morceau de musique depuis un fichier MIDI CSV et les mets dans un objet
 import py_midicsv as pm
-import csv
 import os
 
 class Morceau:
