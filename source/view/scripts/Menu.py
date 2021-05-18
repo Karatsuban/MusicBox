@@ -205,7 +205,6 @@ class Menu(tkinter.Frame):
 
     def exportParametres(self):
         self.saveParametres()
-        self.textBoutonValider.set("En chargement...")
         ImportExportParametres.exportInCSV(self.parametres)
 
     def saveParametres(self):
