@@ -68,42 +68,37 @@ def moyenne_seq(nbT, nbF):
 
 
 def dessine_graphe(readpath, filename, savepath):
-	plt.clf()
-	morceau = Morceau.Morceau(readpath+os.sep+filename)
-	notes_non_quantif = morceau.get_notes()
-	notes_quantif = morceau.get_notes(True)
-	x1 = set(notes_non_quantif)
-	x2 = set(notes_quantif)
-	print(x1)
-	print(x2)
-	X = list(x1.union(x2)) # abscisse du graphe
-	X.sort()
-	print(X)
+    plt.clf()
+    morceau = Morceau.Morceau(readpath+os.sep+filename)
+    notes_non_quantif = morceau.get_notes()
+    notes_quantif = morceau.get_notes(True)
+    x1 = set(notes_non_quantif)
+    x2 = set(notes_quantif)
 
-	y1 = [notes_non_quantif.count(k) for k in X]
-	y2 = [notes_quantif.count(k) for k in X]
+    X = list(x1.union(x2)) # abscisse du graphe
+    X.sort()
 
-	print(y1)
-	print(y2)
-	
-	pos = range(len(X))
-	rects1 = plt.bar(x=[x+0.2 for x in pos], height=y1, width=0.4, color='red', label="Notes non quantifiees")
-	rects2 = plt.bar(x=[x+0.6 for x in pos], height=y2, width=0.4, color='green', label="Notes quantifiees")
-	plt.ylabel("Nombre")
-	plt.xlabel("Duree notes")
-	plt.title("Comparaison notes sur "+filename)
-	plt.xticks([index + 0.4 for index in pos], X)
+    y1 = [notes_non_quantif.count(k) for k in X]
+    y2 = [notes_quantif.count(k) for k in X]
 
-	for rect in rects1:
-		height = rect.get_height()
-		plt.text(rect.get_x() + rect.get_width() / 2 - 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
+    pos = range(len(X))
+    rects1 = plt.bar(x=[x+0.2 for x in pos], height=y1, width=0.4, color='red', label="Notes non quantifiees")
+    rects2 = plt.bar(x=[x+0.6 for x in pos], height=y2, width=0.4, color='green', label="Notes quantifiees")
+    plt.ylabel("Nombre")
+    plt.xlabel("Duree notes")
+    plt.title("Comparaison notes sur "+filename)
+    plt.xticks([index + 0.4 for index in pos], X)
 
-	for rect in rects2:
-		height = rect.get_height()
-		plt.text(rect.get_x() + rect.get_width() / 2 + 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
+    for rect in rects1:
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width() / 2 - 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
 
-	plt.legend(loc="upper right")
-	plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
+    for rect in rects2:
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width() / 2 + 0.05*len(str(height)), height, str(height), ha="center", va="bottom")
+
+    plt.legend(loc="upper right")
+    plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
 
 #######################################################
 
@@ -129,8 +124,8 @@ def main(parametres):
         if nom not in os.listdir(csv_path):
             conversion_en_csv(csv_path, parametres["URL_Dossier"], midi_files)
 
-    for fichier_csv in os.listdir(csv_path): #on parcourt les fichiers csv
-        dessine_graphe(csv_path, fichier_csv, parametres["URL_Dossier"]+os.sep+"Graphiques")
+    #for fichier_csv in os.listdir(csv_path): #on parcourt les fichiers csv
+    #    dessine_graphe(csv_path, fichier_csv, parametres["URL_Dossier"]+os.sep+"Graphiques")
 
 
     # Bloc 3
