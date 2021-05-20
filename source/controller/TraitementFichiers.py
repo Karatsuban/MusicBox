@@ -188,7 +188,6 @@ def main(parametres):
                 if content[index] != '':
                     savename = nom+"-"+str(index+1)+".format"
                     ecrire_fichier(savename, content[index]) #on écrit chaque piste dans un fichier différent
-            liste_textes += content # on rajoute tous les rythmes à la liste d'entraînement du RNN
 
         if (parametres["TypeGeneration"] == "Rythme et mélodie"):
             resTab = []
@@ -213,7 +212,6 @@ def main(parametres):
                 if data[2] not in toucheDico:
                     toucheDico[data[2]] = 1
             ecrire_fichier(nom, [content]) # on écrit tout dans un seul morceau
-            liste_textes.append(content) # on rajoute la mélodie à la liste d'entraînement du RNN
 
     if (parametres["TypeGeneration"] == "Rythme seulement"):
         print("----------Rythme seulement------------\n" +
