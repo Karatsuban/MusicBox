@@ -159,7 +159,6 @@ def main(parametres):
         for csv_files in listeFichiersAConvertir:
             listeMorceaux.append(Morceau.Morceau(csv_path + os.sep + csv_files))
 
-
     # Bloc 5
     # on prépare les morceaux pour le RNN et afficher les info de data setting
     liste_textes = []
@@ -226,14 +225,14 @@ def main(parametres):
         print("--------------------------------------")
 
     # Bloc 6
-    for m in listeFichiersConvertis:
-        if parametres["TypeGeneration"] == "Rythme seulement":
-            content = lire_fichier(parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m)
-            liste_textes.append(content)  # recuperation des donnees
+    if parametres["TypeGeneration"] == "Rythme seulement":
+        format_path = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"
+    elif parametres["TypeGeneration"] == "Rythme et mélodie":
+        format_path = parametres["URL_Dossier"] + os.sep + "Conversion_melodie"
 
-        if parametres["TypeGeneration"] == "Rythme et mélodie":
-            content = lire_fichier(parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m)
-            liste_textes.append(content)  # recuperation des donnees
+    for m in os.listdir(format_path):
+        content = lire_fichier(format_path+os.sep+m)
+        liste_textes.append(content)  # recuperation des donnees
 
     # Bloc 7
     rnn_object = RNN.RNN(parametres["TypeGeneration"], liste_textes, rnn_parametres)  # on crée un objet de type RNN avec les bons paramètres
