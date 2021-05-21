@@ -7,6 +7,7 @@ import numpy as np
 import time
 from math import ceil, log
 import random
+import matplotlib.pyplot as plt
 
 
 class RNN:
@@ -164,16 +165,13 @@ class RNN:
         nb_training_files = self.training_file_number_choice(len(self.input_list))
         training_files, test_files = self.training_file_choice(self.input_list, nb_training_files)
 
-        old_training_loss = 100
-        old_test_loss = 100
-        list_training_loss = []
-        list_test_loss = []
-        list_lr = []
+        list_loss = []
 
         # Boucle d'entraînement
         start = time.time()
         previous = start
 
+        loss = 0
         for epoch in range(1, self.nb_epochs+1):
 
             batch_seq = self.pick_batch()  # on récup une ligne au hasard parmi toutes les seq de training (pour l'instant UNE seule)
@@ -200,18 +198,23 @@ class RNN:
             tensor_target = torch.cat(tuple([torch.tensor(a) for a in target_seq])).to(self.device)
 
             err = self.loss_function(self.cls(out), tensor_target).to(self.device)
-
-            self.lr -= (1/100) * self.lr  # mise à jour du learning rate
+            list_loss.append(err.item())
 
             self.optimizer.zero_grad()  # on efface les gradients de l'entraînement précédent
             err.backward()
             self.optimizer.step()
 
-            if epoch%1 == 0:
-                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, err.item(), time.time() - previous))
+            if epoch%100 == 0:
+                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, loss, time.time() - previous))
                 previous = time.time()
+                loss = 0
+                self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
         print("Entraînement fini")
         print("Temps total : ", time.time()-start)
+        x = [k for k in range(self.nb_epochs)]
+        plt.plot(x, list_loss)
+        plt.show(block=False)
+
 
     def generate(self):
         print("Génération des morceaux")
