@@ -199,6 +199,7 @@ class RNN:
 
             err = self.loss_function(self.cls(out), tensor_target).to(self.device)
             list_loss.append(err.item())
+            loss += err.item()
 
             self.optimizer.zero_grad()  # on efface les gradients de l'entraînement précédent
             err.backward()
