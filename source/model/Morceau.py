@@ -39,8 +39,9 @@ class Morceau:
         # Tracks information
         self.trackList = []
 
-        # Dictionnaire temps vers note et liste des notes
+        # Dictionnaire temps vers note, note vers temps et liste des notes
         self.time_to_note_dict = None
+        self.note_to_time_dict = None
         self.liste_notes = []
 
         if not ".csv" in self.filename:
@@ -87,38 +88,6 @@ class Morceau:
             self.nbTracks = int(h[4]) # on enregistre les informations du header dans l'objet
             self.division = int(h[5])
             self.trackList = [[] for k in range(self.nbTracks)] # on crée  la liste des pistes
-
-            h = self.division # durée de la note de référence
-            # création du dictionnaire de corrélation entre la durée et le type d'une note
-            self.time_to_note_dict = {
-                    4 * h:"b",
-                    2 * h:"d",
-                    h:"h",
-                    1/2 * h:"l",
-                    1/4 * h:"p",
-                    1/8 * h:"t",
-                    1/16 * h:"x",
-                    6 * h:"a",
-                    3 * h:"c",
-                    3/2 * h:"g",
-                    3/4 * h:"k",
-                    3/8 * h:"o",
-                    3/16 * h:"s",
-                    3/32 * h:"w",
-                    4/3 * h:"f",
-                    2/3 * h:"j",
-                    1/3 * h:"n",
-                    1/6 * h:"r",
-                    1/12 * h:"v",
-                    1/24 * h:"z",
-                    8/5 * h:"e",
-                    4/5 * h:"i",
-                    2/5 * h:"m",
-                    1/5 * h:"q",
-                    1/10 * h:"u",
-                    1/20 * h:"y",
-            }
-            self.liste_notes = [k for k in self.time_to_note_dict]
         return lines[1:]
 
     def get_tracks(self, lines):
@@ -145,6 +114,38 @@ class Morceau:
         self.tsDenom = int(line[4])
         self.tsClick = int(line[5])
         self.tsNotesQ = int(line[6])
+        h = self.division * (4 / 2 ** self.tsDenom)  # durée de la note de référence
+        # création du dictionnaire de corrélation entre la durée et le type d'une note
+        self.time_to_note_dict = {
+            4 * h: "b",
+            2 * h: "d",
+            h: "h",
+            1 / 2 * h: "l",
+            1 / 4 * h: "p",
+            1 / 8 * h: "t",
+            1 / 16 * h: "x",
+            6 * h: "a",
+            3 * h: "c",
+            3 / 2 * h: "g",
+            3 / 4 * h: "k",
+            3 / 8 * h: "o",
+            3 / 16 * h: "s",
+            3 / 32 * h: "w",
+            4 / 3 * h: "f",
+            2 / 3 * h: "j",
+            1 / 3 * h: "n",
+            1 / 6 * h: "r",
+            1 / 12 * h: "v",
+            1 / 24 * h: "z",
+            8 / 5 * h: "e",
+            4 / 5 * h: "i",
+            2 / 5 * h: "m",
+            1 / 5 * h: "q",
+            1 / 10 * h: "u",
+            1 / 20 * h: "y",
+        }
+        self.note_to_time_dict = {val: ind for ind, val in self.time_to_note_dict.items()}
+        self.liste_notes = [k for k in self.time_to_note_dict]
 
     def get_key_signature(self, line):
         # cette méthode récupère les données relatives à la key_signature d'un morceau
@@ -210,26 +211,26 @@ class Morceau:
         # encode la piste numero sous le format adapté au rythme et renvoie le résultat
         L = self.get_track(numero)  # on récupère la piste
         chaine_retour = ""
+        time2 = 0
         while L != []:
-            line1 = L[0].split(",") # transformation en liste
-            time1 = int(line1[1]) # récupérer le Time
-            note = int(line1[4]) # récupérer la Note
-            
-            b = 0
-            line2 = [-1,-1,-1,-1,-1]
-            while int(line2[4]) != note : # on cherche la note qui termine
-                #si la note ne se termine, alors on dit qu'elle n'existe pas
-                #prévoir : "and b < len(L)"
-                b += 1
-                line2 = L[b].split(",")
+            line1 = L[0].split(",")  # transformation en liste
+            time1 = int(line1[1])  # récupérer le Time
+            note = int(line1[4])  # récupérer la Note
 
-            time2 = int(line2[1]) # récupération deuxième temps
+            if time1 != time2:  # la note ne commence pas immédiatement après la fin de la précédente
+                duree = self.arrondi_note(time1 - time2)
+                type_note = self.time_to_note_dict[duree].upper()  # on met en majuscule car c'est un silence
+                chaine_retour += str(type_note)
+
+            line2 = L[1].split(",")
+            time2 = int(line2[1])  # récupération deuxième temps
             duree = self.arrondi_note(time2-time1)
+
             type_note = self.time_to_note_dict[duree]
 
             chaine_retour += str(type_note)
 
-            L = L[1:b]+L[b+1:] # on enleve les deux lignes
+            L = L[2:]  # on enleve les deux premières lignes
         return chaine_retour
     
 
@@ -269,10 +270,19 @@ class Morceau:
 
         temps = 0
         liste_note = []
+        is_silence = False
         for note in entree:
-            duree_n = int(list(self.time_to_note_dict.keys())[list(self.time_to_note_dict.values()).index(note)])
-            liste_note.append([temps, "2, {0}, Note_on_c, 0, 69, 80\n".format(temps)]) # la velocité est mise à 80 par défaut (choix sans raison)
-            liste_note.append([temps+duree_n,"2, {0}, Note_on_c, 0, 69, 0\n".format(temps+duree_n)]) # la vélocité est mise à 0 (équivalent de Note_off_c)
+            if note.upper() == note:  # c'est un silence
+                note = note.lower()
+                is_silence = True
+            else:
+                is_silence = False
+
+            duree_n = int(self.note_to_time_dict[note])
+
+            if not is_silence:
+                liste_note.append([temps, "2, {0}, Note_on_c, 0, 69, 80\n".format(temps)]) # la velocité est mise à 80 par défaut (choix sans raison)
+                liste_note.append([temps+duree_n,"2, {0}, Note_on_c, 0, 69, 0\n".format(temps+duree_n)]) # la vélocité est mise à 0 (équivalent de Note_off_c)
             temps += duree_n
         liste_note.sort() #on trie les notes dans l'ordre croissant
 
