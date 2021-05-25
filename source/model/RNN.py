@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 
 class RNN:
 
-    def __init__(self, type, input_list, param_list):
-        self.type = type                            # type du RNN
+    def __init__(self, input_list, param_list):
         self.input_list = input_list                # liste des entree
         self.lr = float(param_list[0]) 		        # taux d'apprentissage du RNN
         self.nb_epochs = int(param_list[1])         # nombre de cycles d'entraînement
@@ -24,9 +23,6 @@ class RNN:
         self.duree_morceaux = int(param_list[6])    # longueur des morceaux
 
         self.device = self.device_choice()          # choix de l'appareil
-
-        if self.type == "Rythme et mélodie":
-            self.input_list = [a.split() for a in self.input_list]
 
         # correction du nombre de morceaux par batch
         self.batch_size = 2**ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min (inférieure)
@@ -94,10 +90,7 @@ class RNN:
                 chars.append(self.dict_int2val[output])
             input = output
 
-        if self.type == "Rythme seulement":
-            return ''.join(chars)
-        else:
-            return ' '.join(chars)
+        return ' '.join(chars)
 
     def device_choice(self):
         # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
@@ -129,13 +122,13 @@ class RNN:
         training_text = []  # liste des training files de longueur taille+1 que l'on va découper
         test_text = []  # liste des tests files de longueur taille+1 que l'on va découper
 
-        if self.type == "Rythme seulement":
-            chars = set(''.join(self.input_list))                            # on joint les text et on extrait les caractères de manière unique
-        elif self.type == "Rythme et mélodie":
-            # on parcourt tous les n-uplets un par un et on crée les dictionnaires associés à chaque valeur du n-uplet
-            chars = set()
-            for a in self.input_list:
-                chars = chars.union(set(a))
+        # on parcourt tous les n-uplets un par un et on crée les dictionnaires associés à chaque valeur du n-uplet
+        self.input_list = [a.split() for a in self.input_list]
+        print(self.input_list)
+        chars = set()  # notre ensemble
+        for a in self.input_list:  # on parcourt chaque input
+            chars = chars.union(set(a))  # on ajoute les notes trouvées à notre ensemble
+        print(chars)
 
         self.dict_int2val = dict(enumerate(chars))                           # on crée un dictionnaire pour maper les entiers aux caractères
         self.dict_val2int = {val: ind for ind, val in self.dict_int2val.items()} 	  # on crée un autre dictionnaire qui map les caractères aux entiers

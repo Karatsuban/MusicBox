@@ -220,7 +220,7 @@ class Morceau:
             if time1 != time2:  # la note ne commence pas immédiatement après la fin de la précédente
                 duree = self.arrondi_note(time1 - time2)
                 type_note = self.time_to_note_dict[duree].upper()  # on met en majuscule car c'est un silence
-                chaine_retour += str(type_note)
+                chaine_retour += str(type_note)+" "
 
             line2 = L[1].split(",")
             time2 = int(line2[1])  # récupération deuxième temps
@@ -228,7 +228,7 @@ class Morceau:
 
             type_note = self.time_to_note_dict[duree]
 
-            chaine_retour += str(type_note)
+            chaine_retour += str(type_note)+" "
 
             L = L[2:]  # on enleve les deux premières lignes
         return chaine_retour
@@ -238,7 +238,7 @@ class Morceau:
         chaine_retour = ""
         if numero == None:
             L_chaine_retour = []
-            for i in range (self.nbTracks):
+            for i in range(self.nbTracks):
                 chaine = self.preparer_track_rythme_select(i+1)
                 L_chaine_retour.append(chaine) 
             return L_chaine_retour
@@ -271,7 +271,7 @@ class Morceau:
         temps = 0
         liste_note = []
         is_silence = False
-        for note in entree:
+        for note in entree.split():
             if note.upper() == note:  # c'est un silence
                 note = note.lower()
                 is_silence = True
@@ -317,25 +317,22 @@ class Morceau:
 #*********************************************************************************************
 
     def preparer_track_melodie_select(self, L):
-         chaine_retour = "" #chaine de retour
+         chaine_retour = ""  # chaine de retour
          save = None
          while L != []:
-             line1 = L[0].split(",") # transformation en liste
-             time1 = int(line1[1]) # récupérer le Time
-             note = int(line1[4]) # récupérer la Note
+             line1 = L[0].split(",")  # transformation en liste
+             time1 = int(line1[1])  # récupérer le Time
+             note = int(line1[4])  # récupérer la Note
              
              b = 0
-             line2 = [-1,-1,-1,-1,-1]
-             while int(line2[4]) != note : # on cherche la note qui termine
-                 #si la note ne se termine, alors on dit qu'elle n'existe pas
-                 #prévoir : "and b < len(L)"
+             line2 = [-1, -1, -1, -1, -1]
+             while int(line2[4]) != note:  # on cherche la note qui termine
                  b += 1
                  line2 = L[b].split(",")
  
-             time2 = int(line2[1]) # récupération deuxième temps
+             time2 = int(line2[1])  # récupération deuxième temps
              duree = self.arrondi_note(time2-time1)
              type_note = self.time_to_note_dict[duree]
- 
  
              if save == None:
                  chaine_retour = str(time1)+":"+str(type_note)+":"+str(note)+" "
@@ -344,7 +341,7 @@ class Morceau:
  
              save = time1
              
-             L = L[1:b]+L[b+1:] # on enleve les deux lignes
+             L = L[1:b]+L[b+1:]  # on enleve les deux lignes
          return chaine_retour
      
 
@@ -353,9 +350,9 @@ class Morceau:
             L = []
             for a in range(self.nbTracks):
                 for note in self.trackList[a]:
-                    time = int(note.split(",")[1]) # on récupère le temps pour le triage
-                    L.append([time,note]) # on ajoute toutes les notes dans la même liste
-            L.sort() # triage de la liste des notes
+                    time = int(note.split(",")[1])  # on récupère le temps pour le triage
+                    L.append([time,note])  # on ajoute toutes les notes dans la même liste
+            L.sort()  # triage de la liste des notes
             L = [k[1] for k in L]
         else:
             L = self.get_track(numero)  # on récupère la seule piste demandée
@@ -386,7 +383,7 @@ class Morceau:
 
         csv_notes_list += [tempo1]
 
-        all_notes = entree.replace("\n", "").split(" ") # on découpe l'entrée note par note
+        all_notes = entree.replace("\n", "").split(" ")  # on découpe l'entrée note par note
         temps = 0
         duree_n = 0
         liste_note = []
