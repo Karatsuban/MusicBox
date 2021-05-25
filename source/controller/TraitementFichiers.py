@@ -8,7 +8,16 @@ import operator
 import os
 import matplotlib.pyplot as plt
 
+rnn_object = None
+listeMorceaux = None
 
+def genereNew(parametres):
+    if rnn_object == None:
+        main(parametres)
+        print("rnn non defini")
+    else:
+        genereMorceaux(parametres, listeMorceaux, rnn_object)
+        print("rnn defini")
 def lire_fichier(nom):
     file = open(nom, 'r')
     lines = file.readlines()
@@ -23,7 +32,7 @@ def ecrire_fichier(nom, donnees):
 
 
 def get_rnn_parameters(parametres):
-    l = "TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,NombreSequenceBatch,NombreMorceaux,DureeMorceaux"
+    l = "TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,NombreSequenceBatch"
     p = []
     for key in l.split(","):
         p.append(parametres[key])
@@ -105,7 +114,9 @@ def dessine_graphe(readpath, filename, savepath):
     plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
 
 
+
 def main(parametres):
+    global rnn_object, listeMorceaux
     rnn_parametres = get_rnn_parameters(parametres)
     # on récupère tous les noms des fichiers .mid du dossier
     listeFichiers = [i for i in os.listdir(parametres["URL_Dossier"]) if ".mid" in i]
@@ -236,9 +247,11 @@ def main(parametres):
 
     # Bloc 7
     rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # on crée un objet de type RNN avec les bons paramètres
-    out = rnn_object.generate()  # on génère les morceaux en fonction des paramètres
+    genereMorceaux(parametres, listeMorceaux, rnn_object)
 
     # Bloc 8
+def genereMorceaux(parametres, listeMorceaux, rnn_object):
+    out = rnn_object.generate(int(parametres["NombreMorceaux"]), int(parametres["DureeMorceaux"])) # on génère les morceaux en fonction des paramètres
     date = datetime.datetime.now()
     dateG = datetime.date(date.year, date.month, date.day)
     dg = dateG.isoformat()
@@ -247,7 +260,7 @@ def main(parametres):
     if parametres["TypeGeneration"] == "Rythme seulement":
         temp = "".join([dg, " ", hg, " ", "R"])
     elif parametres["TypeGeneration"] == "Rythme et mélodie":
-        temp = "".join([dg , " ", hg , " ", "M"])
+        temp = "".join([dg , " ", hg, " ", "M"])
 
     for index in range(len(out)):
         save_name = str(temp)+" "+str(index)
