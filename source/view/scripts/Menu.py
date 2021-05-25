@@ -5,7 +5,9 @@ import tkinter.filedialog
 import tkinter.font as tkFont
 from tkinter import ttk, messagebox
 from source.controller import TraitementFichiers, ImportExportParametres
+from source.model import RNN
 import os
+
 
 
 hauteurBout = 2
@@ -162,6 +164,17 @@ class Menu(tkinter.Frame):
         # bouton pour sauvegarder les paramètres
         self.saveParamsButton = tkinter.Button(self, text="Sauvegarder paramètres", bg="white", command=lambda: [self.exportParametres()])
         self.saveParamsButton.grid(row=17, column=0, sticky="W")
+
+        # bouton pour sauvegarder les paramètres
+        self.genParamsButton = tkinter.Button(self, text="Regénérer d'autre morceaux", bg="white", command=lambda: [self.genereNewMorceau(master)])
+        self.genParamsButton.grid(row=17, column=1, sticky="E")
+
+    def genereNewMorceau(self, master):
+        if self.valide():
+            self.saveParametres()
+            TraitementFichiers.genereNew(self.parametres)
+            master.switch_frame()
+        return
 
     def exportParametres(self):
         self.saveParametres()
