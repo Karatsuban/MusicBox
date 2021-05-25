@@ -41,7 +41,7 @@ class RNN:
         self.embed = None  # fonction d'embedding
 
         # définition du RNN, de la fonction d'évaluation de l'erreur, de la couche linéaire et de l'optimiseur
-        self.rnn = None
+        self.lstm = None
         self.cls = None
         self.loss_function = None
         self.optimizer = None
@@ -62,12 +62,12 @@ class RNN:
         return a
 
     # This function takes in the model and character as arguments and returns the next character prediction and hidden state
-    def predict(self, id, hidden):
+    def predict(self, id, para):
         # One-hot encoding our input to fit into the model
         char = torch.tensor([[id]]).to(self.device)
         input = self.embed(char).to(self.device)
 
-        out, hidden = self.rnn(input, hidden)
+        out, (hidden,cell) = self.lstm(input, para)
         out = self.cls(out)
         prob = nn.functional.softmax(out[-1], dim=1).data
 
@@ -75,18 +75,19 @@ class RNN:
         while char_ind == self.dict_size - 2:
             char_ind = self.distribution_pick(prob)
 
-        return char_ind, hidden
+        return char_ind, (hidden,cell)
 
     # This function takes the desired output length and input characters as arguments, returning the produced sentence
     def sample(self, max_len):
-        self.rnn.eval()  # eval mode
+        self.lstm.eval()  # eval mode
         # First off, run through the starting characters
         chars = []
         input = self.dict_size - 2  # indice du BOS
         hidden = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
+        cell = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
         # Now pass in the previous characters and get a new one
         for ii in range(max_len):
-            output, hidden = self.predict(input, hidden)
+            output, (hidden,cell) = self.predict(input, (hidden, cell))
             if output == self.dict_size - 1:
                 break  # si c'est EOS, on a fini le morceau
             else:
@@ -147,13 +148,13 @@ class RNN:
         self.embed = self.embed.to(self.device)
 
         # on crée le modèle avec les hyperparamètres
-        self.rnn = nn.RNN(input_size=self.embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers)
-        self.rnn = self.rnn.to(self.device)  # on déplace le modèle vers le device utilisé
+        self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers)
+        self.lstm = self.lstm.to(self.device)  # on déplace le modèle vers le device utilisé
 
         # définition de la fonction d'erreur de la couche linéaire et de l'optimiseur
         self.loss_function = nn.CrossEntropyLoss().to(self.device)
         self.cls = nn.Linear(self.hidden_dim*self.nb_layers, self.dict_size).to(self.device)
-        self.optimizer = torch.optim.Adam(self.rnn.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
 
     def pick_batch(self):
         np.random.shuffle(self.input_list)  # on mélange les séquences
@@ -191,7 +192,8 @@ class RNN:
             input_tensor = self.embed(index_tensor).to(self.device)
             packed_input = nn.utils.rnn.pack_padded_sequence(input_tensor, lengths, batch_first=True, enforce_sorted=False).to(self.device)
             h0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)
-            packed_out, _ = self.rnn(packed_input, h0)
+            c0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)
+            packed_out, _ = self.lstm(packed_input, (h0, c0))
             out, input_sizes = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
 
             out = torch.cat([out[i, :l] for i, l in enumerate(lengths)])
@@ -206,7 +208,7 @@ class RNN:
             self.optimizer.step()
 
             if epoch%100 == 0:
-                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, loss, time.time() - previous))
+                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, loss/100, time.time() - previous))
                 previous = time.time()
                 loss = 0
                 self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
