@@ -58,18 +58,18 @@ class Menu(tkinter.Frame):
         # Création et placement du label Nombre de morceaux
         self.nbMorceauxLabel = tkinter.Label(self, text="Nombre de morceaux", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=2, column=0, sticky="W")
         # Création et placement d'une spinbox pour choisir le nombre de morceaux
-        self.nbMorceaux = tkinter.Spinbox(self, from_=1, to=20, width=10)
+        self.nbMorceaux = tkinter.Spinbox(self, from_=1, to=200, width=10)
         self.nbMorceaux.grid(row=2, column=1, sticky="W")
-        self.nbMorceauxLimit = tkinter.Label(self, text="(1-20)", bg="white").grid(row=2, column=1, sticky="e")
+        self.nbMorceauxLimit = tkinter.Label(self, text="(1-200)", bg="white").grid(row=2, column=1, sticky="e")
 
         # Création et placement du label Durée max des morceaux
         tkinter.Label(self, text="Durée max morceaux", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=3, column=0, sticky="W")
         # Création du spinbox de durée  max du morceau
-        self.dureeMaxMorceau = tkinter.Spinbox(self, from_=60, to=340, width=10)
+        self.dureeMaxMorceau = tkinter.Spinbox(self, from_=5, to=1000, width=10)
         # Placement de la spinbox
         self.dureeMaxMorceau.grid(row=3, column=1, sticky="W")
         # Placement de l'affichage des limites de la durée
-        tkinter.Label(self, text="(5-340)", bg="white").grid(row=3, column=1, sticky="e")
+        tkinter.Label(self, text="(5-1000)", bg="white").grid(row=3, column=1, sticky="e")
 
         # Tonalité de morceaux
         tkinter.Label(self, text="Tonalité de morceaux", height=hauteurBout,  font=self.PoliceTexte, bg='white').grid(row=4, column=0, sticky="W")
@@ -80,9 +80,9 @@ class Menu(tkinter.Frame):
         # Vitesse des morceaux
         tkinter.Label(self, text="Vitesse des morceaux", height=hauteurBout,  font=self.PoliceTexte, bg='white').grid(row=5, column=0, sticky="W")
         # Bouton vitesse des morceau
-        self.bpmMorceau = tkinter.Spinbox(self, from_=30, to=240, width=10)
+        self.bpmMorceau = tkinter.Spinbox(self, from_=1, to=360, width=10)
         self.bpmMorceau.grid(row=5, column=1, sticky="W")
-        self.bpmMorceauLimit = tkinter.Label(self, text="(30-240)", bg="white").grid(row=5, column=1, sticky="e")
+        self.bpmMorceauLimit = tkinter.Label(self, text="(1-360)", bg="white").grid(row=5, column=1, sticky="e")
 
         # Choix de génération
         tkinter.Label(self, text="Type de génération", width=15, height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=6, column=0, sticky="W")
@@ -116,9 +116,9 @@ class Menu(tkinter.Frame):
         varEpoch.set(self.parametres["NombreEpoch"])
         tkinter.Label(self, text="Nombre d'Epoch", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=10, column=0, sticky="W")
         # Création et placement d'une spinbox pour choisir le nombre d'epoch
-        self.nbEpoch = tkinter.Spinbox(self, from_=1, to=7000, width=10, textvariable=varEpoch, state=tkinter.DISABLED)
+        self.nbEpoch = tkinter.Spinbox(self, from_=1, to=1000000, width=10, textvariable=varEpoch, state=tkinter.DISABLED)
         self.nbEpoch.grid(row=10, column=1, sticky="W")
-        tkinter.Label(self, text="(1-7000)", bg="white").grid(row=10, column=1, sticky="e")
+        tkinter.Label(self, text="(1-1000000)", bg="white").grid(row=10, column=1, sticky="e")
 
         # Création et placement du label Nombre de dimension cachée
         varDimCach = tkinter.StringVar(self)
@@ -210,11 +210,11 @@ class Menu(tkinter.Frame):
 
     def valide(self):
         valide = True
-        if int(self.nbMorceaux.get()) > 20 or int(self.nbMorceaux.get()) < 1:
+        if int(self.nbMorceaux.get()) > 200 or int(self.nbMorceaux.get()) < 1:
             valide = False
-        if int(self.dureeMaxMorceau.get()) < 5 or int(self.dureeMaxMorceau.get()) > 340:
+        if int(self.dureeMaxMorceau.get()) < 5 or int(self.dureeMaxMorceau.get()) > 1000:
             valide = False
-        if int(self.bpmMorceau.get()) < 30 or int(self.bpmMorceau.get()) > 240:
+        if int(self.bpmMorceau.get()) < 1 or int(self.bpmMorceau.get()) > 360:
             valide = False
         if not valide:
             tkinter.messagebox.showwarning("Attention", "Attention : Le nombre de morceaux, ou \nla durée, ou les bpm est incorrect")
