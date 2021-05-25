@@ -19,8 +19,6 @@ class RNN:
         self.hidden_dim = int(param_list[2])        # taille de la dimension cachée
         self.nb_layers = int(param_list[3])         # nombre de couches
         self.batch_size = int(param_list[4])        # nombre de séquences dans un batch
-        self.nb_morceaux = int(param_list[5])       # nombre de morceaux à produire
-        self.duree_morceaux = int(param_list[6])    # longueur des morceaux
 
         self.device = self.device_choice()          # choix de l'appareil
 
@@ -63,7 +61,7 @@ class RNN:
         char = torch.tensor([[id]]).to(self.device)
         input = self.embed(char).to(self.device)
 
-        out, (hidden,cell) = self.lstm(input, para)
+        out, (hidden, cell) = self.lstm(input, para)
         out = self.cls(out)
         prob = nn.functional.softmax(out[-1], dim=1).data
 
@@ -71,7 +69,7 @@ class RNN:
         while char_ind == self.dict_size - 2:
             char_ind = self.distribution_pick(prob)
 
-        return char_ind, (hidden,cell)
+        return char_ind, (hidden, cell)
 
     # This function takes the desired output length and input characters as arguments, returning the produced sentence
     def sample(self, max_len):
@@ -83,7 +81,7 @@ class RNN:
         cell = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
         # Now pass in the previous characters and get a new one
         for ii in range(max_len):
-            output, (hidden,cell) = self.predict(input, (hidden, cell))
+            output, (hidden, cell) = self.predict(input, (hidden, cell))
             if output == self.dict_size - 1:
                 break  # si c'est EOS, on a fini le morceau
             else:
@@ -211,11 +209,10 @@ class RNN:
         plt.plot(x, list_loss)
         plt.show(block=False)
 
-
-    def generate(self):
+    def generate(self, nombre, duree):
         print("Génération des morceaux")
         # on retourne le résultat sous la forme d'une liste
         out = []
-        for a in range(self.nb_morceaux):
-            out.append(self.sample(self.duree_morceaux))
+        for a in range(nombre):
+            out.append(self.sample(duree))
         return out
