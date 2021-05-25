@@ -235,12 +235,19 @@ def main(parametres):
         liste_textes.append(content)  # recuperation des donnees
 
     # Bloc 7
-    rnn_object = RNN.RNN(parametres["TypeGeneration"], liste_textes, rnn_parametres)  # on crée un objet de type RNN avec les bons paramètres
+    rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # on crée un objet de type RNN avec les bons paramètres
     out = rnn_object.generate()  # on génère les morceaux en fonction des paramètres
 
     # Bloc 8
     date = datetime.datetime.now()
-    temp = "".join([str(date.year), "-", str(date.month), "-", str(date.day), " ", str(date.hour), "-", str(date.minute), "-", str(date.second)])
+    dateG = datetime.date(date.year, date.month, date.day)
+    dg = dateG.isoformat()
+    heureG = datetime.time(date.hour, date.minute, date.second)
+    hg = heureG.strftime('%H-%M-%S')
+    if parametres["TypeGeneration"] == "Rythme seulement":
+        temp = "".join([dg, " ", hg, " ", "R"])
+    elif parametres["TypeGeneration"] == "Rythme et mélodie":
+        temp = "".join([dg , " ", hg , " ", "M"])
 
     for index in range(len(out)):
         save_name = str(temp)+" "+str(index)
