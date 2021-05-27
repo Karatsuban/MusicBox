@@ -23,7 +23,7 @@ class Application(tkinter.Tk):
         # Réglage du fond en blanc
         self.configure(bg='white')
 
-        self.tailleLecteur = "525x285"
+        self.tailleLecteur = "525x295"
         self.tailleMenu = "525x680"
 
         ########################################################################
@@ -106,6 +106,8 @@ def start():
     app = Application()
     # Centrage du futur affichage
     centrefenetre(app)
+    # mettre en premier plan au lancement
+    app.focus_force()
     # Empecher le redimensionnement
     app.resizable(width=False, height=False)
 
