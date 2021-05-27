@@ -12,18 +12,14 @@ import matplotlib.pyplot as plt
 
 class RNN:
 
-    def __init__(self, input_list, param_list):
+    def __init__(self, input_list, param_list, load_param=None):
         self.input_list = input_list                # liste des entree
         self.lr = float(param_list[0]) 		        # taux d'apprentissage du RNN
         self.nb_epochs = int(param_list[1])         # nombre de cycles d'entraînement
+
         self.hidden_dim = int(param_list[2])        # taille de la dimension cachée
         self.nb_layers = int(param_list[3])         # nombre de couches
         self.batch_size = int(param_list[4])        # nombre de séquences dans un batch
-
-        self.device = self.device_choice()          # choix de l'appareil
-
-        # correction du nombre de morceaux par batch
-        self.batch_size = 2**ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min (inférieure)
 
         # définition des dictionaires de notes vers index et invers
         self.dict_int2val = None           # liste des dictionnaires de traduction de int vers val
@@ -40,20 +36,52 @@ class RNN:
         self.loss_function = None
         self.optimizer = None
 
-        self.prepare()
-        self.train()
+        self.input_list = [a.split() for a in self.input_list]
 
-    def distribution_pick(self, vecteur):
-        # prend un vecteur de probabilités et renvoie un indice après un tirage
-        vecteur = vecteur.detach().to('cpu').numpy()[0]
-        nb_elt = len(vecteur)
-        val = random.random()
-        cumul = 0
-        for a in range(nb_elt):
-            cumul += vecteur[a]
-            if val < cumul:
-                return a
-        return a
+        # correction du nombre de morceaux par batch
+        self.batch_size = 2 ** ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min entre batch_size et le nombre de sequences d'entrée
+
+        self.device = device_choice()  # choix de l'appareil (CPU/GPU)
+
+        if load_param is not None:
+            # on est en train de charger un RNN
+            self.setParametres(load_param)
+        else:
+            self.prepare()
+
+    def getParametres(self):
+        parametres = {
+            "NombreDimensionCachee": self.hidden_dim,
+            "NombreLayer": self.nb_layers,
+            "dict_int2val": self.dict_int2val,
+            "dict_val2int": self.dict_val2int,
+            "dict_size": self.dict_size,
+            "embed_size": self.embed_size,
+            "embed": self.embed,
+            "lstm_state_dict": self.lstm.state_dict(),
+            "cls": self.cls,
+            "loss_function": self.loss_function,
+            "optimizer_state_dict": self.optimizer.state_dict(),
+        }
+        return parametres
+
+    def setParametres(self, param):
+        # vérifier si on a besoin de passer les objets sur un device
+        self.hidden_dim = param["NombreDimensionCachee"]
+        self.nb_layers = param["NombreLayer"]
+        self.dict_int2val = param["dict_int2val"]
+        self.dict_val2int = param["dict_val2int"]
+        self.dict_size = param["dict_size"]
+        self.embed_size = param["embed_size"]
+        self.embed = param["embed"]
+        self.cls = param["cls"]
+        self.loss_function = param["loss_function"]
+
+        self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers).to(self.device)
+        self.lstm.load_state_dict(param["lstm_state_dict"])
+
+        self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
+        self.optimizer.load_state_dict(param["optimizer_state_dict"])
 
     # This function takes in the model and character as arguments and returns the next character prediction and hidden state
     def predict(self, id, para):
@@ -67,7 +95,7 @@ class RNN:
 
         char_ind = self.dict_size - 2
         while char_ind == self.dict_size - 2:
-            char_ind = self.distribution_pick(prob)
+            char_ind = distribution_pick(prob)
 
         return char_ind, (hidden, cell)
 
@@ -90,43 +118,15 @@ class RNN:
 
         return ' '.join(chars)
 
-    def device_choice(self):
-        # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
-        is_cuda = torch.cuda.is_available()
-
-        # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
-        if is_cuda:
-            device = torch.device("cuda")
-            print("GPU is available")
-        else:
-            device = torch.device("cpu")
-            print("GPU not available, CPU used")
-        return device
-
-    def training_file_number_choice(self, total):
-        # retourne le nombre de fichiers qui seront utilisés pour l'entrainement du RNN mais pas pour les tests
-        return ceil(total * 80/100)  # 80% des fichiers sont utilisés pour l'entraînement
-
-    def training_file_choice(self, liste, nb):
-        # retourne une liste composée des fichiers utilisées pour l'entraînement et des fichiers utilisés pour les tests
-        L = [i for i in range(len(liste))]  # liste d'index
-        L_id = random.sample(L, nb)  # sample de taille nb d'index
-        training = [liste[i] for i in L_id]  # liste de training
-        test = [liste[i] for i in range(len(liste)) if i not in L_id]  # liste de test
-        return [training, test]
-
     def prepare(self):
 
         training_text = []  # liste des training files de longueur taille+1 que l'on va découper
         test_text = []  # liste des tests files de longueur taille+1 que l'on va découper
 
         # on parcourt tous les n-uplets un par un et on crée les dictionnaires associés à chaque valeur du n-uplet
-        self.input_list = [a.split() for a in self.input_list]
-        print(self.input_list)
         chars = set()  # notre ensemble
         for a in self.input_list:  # on parcourt chaque input
             chars = chars.union(set(a))  # on ajoute les notes trouvées à notre ensemble
-        print(chars)
 
         self.dict_int2val = dict(enumerate(chars))                           # on crée un dictionnaire pour maper les entiers aux caractères
         self.dict_val2int = {val: ind for ind, val in self.dict_int2val.items()} 	  # on crée un autre dictionnaire qui map les caractères aux entiers
@@ -144,18 +144,18 @@ class RNN:
 
         # définition de la fonction d'erreur de la couche linéaire et de l'optimiseur
         self.loss_function = nn.CrossEntropyLoss().to(self.device)
-        self.cls = nn.Linear(self.hidden_dim*self.nb_layers, self.dict_size).to(self.device)
+        self.cls = nn.Linear(self.hidden_dim, self.dict_size).to(self.device)
         self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
 
     def pick_batch(self):
         np.random.shuffle(self.input_list)  # on mélange les séquences
         return self.input_list[:self.batch_size]  # on prend les self.batch_size premières séquences
 
-    def train(self):
+    def train(self, nb_epochs):
         print("Début de l'Entraînement")
 
-        nb_training_files = self.training_file_number_choice(len(self.input_list))
-        training_files, test_files = self.training_file_choice(self.input_list, nb_training_files)
+        nb_training_files = training_file_number_choice(len(self.input_list))
+        training_files, test_files = training_file_choice(self.input_list, nb_training_files)
 
         list_loss = []
 
@@ -164,7 +164,7 @@ class RNN:
         previous = start
 
         loss = 0
-        for epoch in range(1, self.nb_epochs+1):
+        for epoch in range(1, nb_epochs+1):
 
             batch_seq = self.pick_batch()  # on récup une ligne au hasard parmi toutes les seq de training (pour l'instant UNE seule)
             input_seq = []
@@ -190,7 +190,8 @@ class RNN:
             out = torch.cat([out[i, :l] for i, l in enumerate(lengths)])
             tensor_target = torch.cat(tuple([torch.tensor(a) for a in target_seq])).to(self.device)
 
-            err = self.loss_function(self.cls(out), tensor_target).to(self.device)
+            out = self.cls(out)
+            err = self.loss_function(out, tensor_target).to(self.device)
             list_loss.append(err.item())
             loss += err.item()
 
@@ -198,14 +199,14 @@ class RNN:
             err.backward()
             self.optimizer.step()
 
-            if epoch%100 == 0:
-                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, loss/100, time.time() - previous))
+            if epoch % 100 == 0:
+                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, nb_epochs, loss/100, time.time() - previous))
                 previous = time.time()
                 loss = 0
                 self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
         print("Entraînement fini")
         print("Temps total : ", time.time()-start)
-        x = [k for k in range(self.nb_epochs)]
+        x = [k for k in range(nb_epochs)]
         plt.plot(x, list_loss)
         plt.show(block=False)
 
@@ -216,3 +217,44 @@ class RNN:
         for a in range(nombre):
             out.append(self.sample(duree))
         return out
+
+
+def distribution_pick(vecteur):
+    # prend un vecteur de probabilités et renvoie un indice après un tirage
+    vecteur = vecteur.detach().to('cpu').numpy()[0]
+    nb_elt = len(vecteur)
+    val = random.random()
+    cumul = 0
+    for a in range(nb_elt):
+        cumul += vecteur[a]
+        if val < cumul:
+            return a
+    return nb_elt - 1
+
+
+def training_file_number_choice(total):
+    # retourne le nombre de fichiers qui seront utilisés pour l'entrainement du RNN mais pas pour les tests
+    return ceil(total * 80/100)  # 80% des fichiers sont utilisés pour l'entraînement
+
+
+def training_file_choice(liste, nb):
+    # retourne une liste composée des fichiers utilisées pour l'entraînement et des fichiers utilisés pour les tests
+    L = [i for i in range(len(liste))]  # liste d'index
+    L_id = random.sample(L, nb)  # sample de taille nb d'index
+    training = [liste[i] for i in L_id]  # liste de training
+    test = [liste[i] for i in range(len(liste)) if i not in L_id]  # liste de test
+    return [training, test]
+
+
+def device_choice():
+    # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
+    is_cuda = torch.cuda.is_available()
+
+    # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
+    if is_cuda:
+        device = torch.device("cuda")
+        print("GPU is available")
+    else:
+        device = torch.device("cpu")
+        print("GPU not available, CPU used")
+    return device
