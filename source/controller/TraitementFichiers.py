@@ -7,17 +7,31 @@ import py_midicsv as pm
 import operator
 import os
 import matplotlib.pyplot as plt
+import torch
 
 rnn_object = None
 listeMorceaux = None
 
+
 def genereNew(parametres):
-    if rnn_object == None:
-        main(parametres)
-        print("rnn non defini")
-    else:
-        genereMorceaux(parametres, listeMorceaux, rnn_object)
-        print("rnn defini")
+    genereMorceaux(parametres, listeMorceaux, rnn_object)
+
+
+def saveModel(save_path):
+    parametres = rnn_object.getParametres()
+    torch.save(parametres, save_path, map_location=torch.device('cpu'))
+
+
+def loadModel(load_path, user_param):
+    global rnn_object
+    load_params = torch.load(load_path)  # on lit le fichier de sauvegarde
+    check_conversions(user_param)  # on vérifie que toutes les conversions ont bien eu lieu
+    param_list = get_rnn_parameters(user_param)
+    input_list = get_input_liste(user_param)
+    rnn_object = RNN.RNN(input_list, param_list, load_params)
+    return load_params
+
+
 def lire_fichier(nom):
     file = open(nom, 'r')
     lines = file.readlines()
@@ -114,10 +128,8 @@ def dessine_graphe(readpath, filename, savepath):
     plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
 
 
-
-def main(parametres):
-    global rnn_object, listeMorceaux
-    rnn_parametres = get_rnn_parameters(parametres)
+def check_conversions(parametres):  # anciennement main
+    global listeMorceaux
     # on récupère tous les noms des fichiers .mid du dossier
     listeFichiers = [i for i in os.listdir(parametres["URL_Dossier"]) if ".mid" in i]
 
@@ -235,23 +247,32 @@ def main(parametres):
         print("****** Nombre d'occurence de chaque touche des sequences : ", len(count_freq_dico(toucheDico)), count_freq_dico(toucheDico))
         print("--------------------------------------")
 
-    # Bloc 6
+
+def train(parametres, is_model):
+    global rnn_object
+    rnn_parametres = get_rnn_parameters(parametres)
+    check_conversions(parametres)  # on vérifie que toutes les conversions ont bien été faites
+    liste_textes = get_input_liste(parametres)
+    if not is_model:  # s'il n'y a pas de modèle en cours...
+        rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # ...on crée un modèle avec les bons paramètres
+    rnn_object.train(int(parametres["NombreEpoch"]))  # on entraîne le modèle
+
+
+def get_input_liste(parametres):
+    liste_textes = []
     if parametres["TypeGeneration"] == "Rythme seulement":
-        format_path = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"
+        format_path = parametres["URL_Dossier"] + os.sep + "Conversion_rythme"
     elif parametres["TypeGeneration"] == "Rythme et mélodie":
         format_path = parametres["URL_Dossier"] + os.sep + "Conversion_melodie"
 
     for m in os.listdir(format_path):
-        content = lire_fichier(format_path+os.sep+m)
+        content = lire_fichier(format_path + os.sep + m)
         liste_textes.append(content)  # recuperation des donnees
+    return liste_textes
 
-    # Bloc 7
-    rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # on crée un objet de type RNN avec les bons paramètres
-    genereMorceaux(parametres, listeMorceaux, rnn_object)
 
-    # Bloc 8
 def genereMorceaux(parametres, listeMorceaux, rnn_object):
-    out = rnn_object.generate(int(parametres["NombreMorceaux"]), int(parametres["DureeMorceaux"])) # on génère les morceaux en fonction des paramètres
+    out = rnn_object.generate(int(parametres["NombreMorceaux"]), int(parametres["DureeMorceaux"]))  # on génère les morceaux en fonction des paramètres
     date = datetime.datetime.now()
     dateG = datetime.date(date.year, date.month, date.day)
     dg = dateG.isoformat()
@@ -260,7 +281,7 @@ def genereMorceaux(parametres, listeMorceaux, rnn_object):
     if parametres["TypeGeneration"] == "Rythme seulement":
         temp = "".join([dg, " ", hg, " ", "R"])
     elif parametres["TypeGeneration"] == "Rythme et mélodie":
-        temp = "".join([dg , " ", hg, " ", "M"])
+        temp = "".join([dg, " ", hg, " ", "M"])
 
     for index in range(len(out)):
         save_name = str(temp)+" "+str(index)
@@ -270,5 +291,5 @@ def genereMorceaux(parametres, listeMorceaux, rnn_object):
             listeMorceaux[0].format_to_csv(out[index], save_name)  # enregistre le morceau sous format MIDI
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
