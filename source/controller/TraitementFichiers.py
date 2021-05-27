@@ -19,7 +19,7 @@ def genereNew(parametres):
 
 def saveModel(save_path):
     parametres = rnn_object.getParametres()
-    torch.save(parametres, save_path, map_location=torch.device('cpu'))
+    torch.save(parametres, save_path)
 
 
 def loadModel(load_path, user_param):
