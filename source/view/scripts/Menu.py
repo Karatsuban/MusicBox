@@ -5,7 +5,10 @@ import tkinter.filedialog
 import tkinter.font as tkFont
 from tkinter import ttk, messagebox
 from source.controller import TraitementFichiers, ImportExportParametres
+import datetime
+import webbrowser
 import os
+
 
 hauteurBout = 2
 
@@ -45,6 +48,7 @@ class Menu(tkinter.Frame):
         self.menuPropos = tkinter.Menu(self.menuBarre, tearoff=0)
         self.menuPropos.add_command(label="À propos", command=about)
         self.menuPropos.add_command(label="Crédits", command=credits)
+        self.menuPropos.add_command(label="GitHub", command=github)
 
         self.menuBarre.add_cascade(label="Modèle", menu=self.menuFichier)  # Menu déroulant "Fichier"
         self.menuBarre.add_cascade(label="À propos", menu=self.menuPropos)  # Menu déroulant "À propos"
@@ -66,16 +70,20 @@ class Menu(tkinter.Frame):
         self.urlEntry.grid(row=1, column=1, sticky="EW")
 
         # Création et placement du label Nombre de morceaux
+        varnbMorceaux = tkinter.StringVar(self)
+        varnbMorceaux.set(self.parametres["NombreMorceaux"])
         self.nbMorceauxLabel = tkinter.Label(self, text="Nombre de morceaux", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=2, column=0, sticky="W")
         # Création et placement d'une spinbox pour choisir le nombre de morceaux
-        self.nbMorceaux = tkinter.Spinbox(self, from_=1, to=200, width=10)
+        self.nbMorceaux = tkinter.Spinbox(self, from_=1, to=200, width=10, textvariable=varnbMorceaux)
         self.nbMorceaux.grid(row=2, column=1, sticky="W")
         self.nbMorceauxLimit = tkinter.Label(self, text="(1-200)", bg="white").grid(row=2, column=1, sticky="e")
 
         # Création et placement du label Durée max des morceaux
+        vardureeMaxMorceau = tkinter.StringVar(self)
+        vardureeMaxMorceau.set(self.parametres["DureeMorceaux"])
         tkinter.Label(self, text="Durée max morceaux", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=3, column=0, sticky="W")
         # Création du spinbox de durée  max du morceau
-        self.dureeMaxMorceau = tkinter.Spinbox(self, from_=5, to=1000, width=10)
+        self.dureeMaxMorceau = tkinter.Spinbox(self, from_=5, to=1000, width=10, textvariable=vardureeMaxMorceau)
         # Placement de la spinbox
         self.dureeMaxMorceau.grid(row=3, column=1, sticky="W")
         # Placement de l'affichage des limites de la durée
@@ -88,9 +96,11 @@ class Menu(tkinter.Frame):
         self.tonaliteMorceau.grid(row=4, column=1, sticky="W")
 
         # Vitesse des morceaux
+        varbpmMorceau = tkinter.StringVar(self)
+        varbpmMorceau.set(self.parametres["VitesseMorceaux"])
         tkinter.Label(self, text="Vitesse des morceaux", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=5, column=0, sticky="W")
         # Bouton vitesse des morceau
-        self.bpmMorceau = tkinter.Spinbox(self, from_=1, to=360, width=10)
+        self.bpmMorceau = tkinter.Spinbox(self, from_=1, to=360, width=10, textvariable=varbpmMorceau)
         self.bpmMorceau.grid(row=5, column=1, sticky="W")
         self.bpmMorceauLimit = tkinter.Label(self, text="(1-360)", bg="white").grid(row=5, column=1, sticky="e")
 
@@ -226,20 +236,21 @@ class Menu(tkinter.Frame):
 
     def valide(self):
         valide = True
-        if int(self.nbMorceaux.get()) > 200 or int(self.nbMorceaux.get()) < 1:
+        if "." in self.nbMorceaux.get() or int(float(self.nbMorceaux.get())) > 200 or int(float(self.nbMorceaux.get())) < 1:
             valide = False
-        if int(self.dureeMaxMorceau.get()) < 5 or int(self.dureeMaxMorceau.get()) > 1000:
+        if "." in self.dureeMaxMorceau.get() or int(float(self.dureeMaxMorceau.get())) < 5 or int(float(self.dureeMaxMorceau.get())) > 1000:
             valide = False
-        if int(self.bpmMorceau.get()) < 1 or int(self.bpmMorceau.get()) > 360:
+        if "." in self.bpmMorceau.get() or int(float(self.bpmMorceau.get())) < 1 or int(float(self.bpmMorceau.get())) > 360:
             valide = False
         if float(self.txApprentissage.get()) <= 0 or float(self.txApprentissage.get()) > 1:
             valide = False
-        if int(self.nbEpoch.get()) < 1 or int(self.nbEpoch.get()) > 1000000:
+        if "." in self.nbEpoch.get() or int(float(self.nbEpoch.get())) < 1 or int(float(self.nbEpoch.get())) > 1000000:
             valide = False
-        if int(self.nbDimCachee.get()) < 16 or int(self.nbDimCachee.get()) > 2048:
+        if "." in self.nbDimCachee.get() or int(float(self.nbDimCachee.get())) < 16 or int(float(self.nbDimCachee.get())) > 2048:
             valide = False
-        if int(self.nbSeqBatch.get()) < 1 or int(self.nbSeqBatch.get()) > 512:
+        if "." in self.nbSeqBatch.get() or int(float(self.nbSeqBatch.get())) < 1 or int(float(self.nbSeqBatch.get())) > 512:
             valide = False
+
 
         if not valide:
             tkinter.messagebox.showwarning("Attention", "Attention : un des paramètre saisi est incorrect! \n Veuillez bien respecter les indications.")
@@ -275,9 +286,10 @@ class Menu(tkinter.Frame):
     def newModel(self):
         if self.is_model:
             choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours d'utilisation, voulez-vous l'enregistrer ?")
+            temp = getDate()
             if choice is not None:
                 if choice:  # oui
-                    filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar').replace("/", os.sep)
+                    filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
                     TraitementFichiers.saveModel(filename)
                 self.is_model = False  # on a créé un nouveau modèle
                 self.genParamsButton["state"] = tkinter.DISABLED
@@ -286,22 +298,24 @@ class Menu(tkinter.Frame):
                     self.nbLayer["state"] = tkinter.NORMAL
 
     def saveModel(self):
+        temp = getDate()
         if not self.is_model:
             tkinter.messagebox.showinfo("Attention", "Il n'y a pas de modèle en cours d'utilisation")
         else:
-            filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar').replace("/", os.sep)
+            filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
             if filename == "":
                 tkinter.messagebox.showerror("Erreur", "Pas de fichier choisi !")
             else:
                 TraitementFichiers.saveModel(filename)
 
     def loadModel(self):
+        temp = getDate()
         choice = True
         if self.is_model:
             choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours, souhaitez-vous l'enregistrer ?")
             if choice is not None:
                 if choice:
-                    filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar').replace("/", os.sep)
+                    filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
                     if filename == "":
                         tkinter.messagebox.showerror("Erreur", "Pas de fichier choisi !")
                     else:
@@ -329,6 +343,9 @@ def credits():
 
 def about():
     tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 1.5, 2021")
+
+def github():
+    webbrowser.open("https://github.com/Karatsuban/MusicBox", new=0)
 
 
 def muchFileWarning(path):
@@ -369,3 +386,12 @@ def centrefenetre(fen):
     fen.update_idletasks()
     l, h, x, y = geoliste(fen.geometry())
     fen.geometry("%dx%d%+d%+d" % (l, h, (fen.winfo_screenwidth() - l) // 2, (fen.winfo_screenheight() - h) // 2))
+
+def getDate():
+    date = datetime.datetime.now()
+    dateG = datetime.date(date.year, date.month, date.day)
+    dg = dateG.isoformat()
+    heureG = datetime.time(date.hour, date.minute, date.second)
+    hg = heureG.strftime('%H-%M-%S')
+    temp = "".join([dg, " ", hg])
+    return temp
