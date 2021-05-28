@@ -266,6 +266,7 @@ class Menu(tkinter.Frame):
             if self.paramsAvancesValue == 1:
                 self.nbDimCachee["state"] = tkinter.DISABLED
                 self.nbLayer["state"] = tkinter.DISABLED
+                self.typeGenComboboite["state"] = tkinter.DISABLED
         return
 
     # Méthode pour l'explorateur de fichier
@@ -279,7 +280,7 @@ class Menu(tkinter.Frame):
                 self.urlVar.set(filename)
                 muchFileWarning(filename)
             else:
-                tkinter.messagebox.showerror('Erreur', "Il y a pas de fichier .mid dans ce dossier!\nChemin va être remplacé par default.")
+                tkinter.messagebox.showerror('Erreur', "Il y a pas de fichier .mid dans ce dossier!\nChemin va être remplacé par défault.")
                 self.urlVar.set(self.urlVar.get())
 
     def newModel(self):
@@ -288,20 +289,21 @@ class Menu(tkinter.Frame):
             temp = "Model "+getDate()
             if choice is not None:
                 if choice:  # oui
-                    filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
+                    filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"]+os.sep+"Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
                     TraitementFichiers.saveModel(filename)
                 self.is_model = False  # on a créé un nouveau modèle
                 self.genParamsButton["state"] = tkinter.DISABLED
                 if self.paramsAvancesValue == 1:
                     self.nbDimCachee["state"] = tkinter.NORMAL
                     self.nbLayer["state"] = tkinter.NORMAL
+                    self.typeGenComboboite["state"] = tkinter.NORMAL
 
     def saveModel(self):
         temp = "Model "+getDate()
         if not self.is_model:
             tkinter.messagebox.showinfo("Attention", "Il n'y a pas de modèle en cours d'utilisation")
         else:
-            filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
+            filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"]+os.sep+"Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
             if filename != "":
                 TraitementFichiers.saveModel(filename)
 
@@ -312,21 +314,23 @@ class Menu(tkinter.Frame):
             choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours, souhaitez-vous l'enregistrer ?")
             if choice is not None:
                 if choice:
-                    filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
+                    filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"]+os.sep+"Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
                     if filename != "":
                         TraitementFichiers.saveModel(filename)
         # peut-être rajouter une variable is_saved pour savoir si le fichier a été sauvegardé ou pas
         if choice is not None:  # l'utilisateur n'a pas choisi 'cancel'
-            filename = tkinter.filedialog.askopenfilename(filetypes=[('tar files', '.tar')]).replace("/", os.sep)
+            filename = tkinter.filedialog.askopenfilename(initialdir=self.parametres["URL_Dossier"], filetypes=[('tar files', '.tar')]).replace("/", os.sep)
             if filename != '':
                 user_parametres = self.getParametres()  # on récupère les paramètres entrés par l'utilisateur
                 model_params = TraitementFichiers.loadModel(filename, user_parametres)  # on récupère les paramètres du modèle chargé
                 self.varNbLayer.set(model_params["NombreLayer"])  # on set les valeurs de nbLayer et nbDimCachee avec les paramètres du modèle chargé
                 self.varDimCach.set(model_params["NombreDimensionCachee"])
+                self.typeGenComboboite.set(model_params["TypeGeneration"])
                 self.is_model = True
                 if self.paramsAvancesValue == 1:
                     self.nbDimCachee["state"] = tkinter.DISABLED
                     self.nbLayer["state"] = tkinter.DISABLED
+                    self.typeGenComboboite["state"] = tkinter.DISABLED
                 self.genParamsButton["state"] = tkinter.NORMAL
 
 
