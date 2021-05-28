@@ -20,8 +20,7 @@ class Application(tkinter.Tk):
         tkinter.Tk.__init__(self)
         # Affectation du titre de la fenêtre
         self.title("MusicBox")
-        # icon de l'app
-        self.iconbitmap("." + os.sep + "source" + os.sep + "view" + os.sep + "icon" + os.sep + "icon.ico")
+
         # Réglage du fond en blanc
         self.configure(bg='white')
 
@@ -108,6 +107,8 @@ def centrefenetre(fen):
 def start():
     # instancie la classe Application
     app = Application()
+    # icon de l'app
+    app.iconbitmap("." + os.sep + "source" + os.sep + "view" + os.sep + "icon" + os.sep + "icon.ico")
     # Centrage du futur affichage
     centrefenetre(app)
     # mettre en premier plan au lancement
