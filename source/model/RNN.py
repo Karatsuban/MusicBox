@@ -74,7 +74,9 @@ class RNN:
         self.dict_size = param["dict_size"]
         self.embed_size = param["embed_size"]
         self.embed = param["embed"]
+        self.embed.to(self.device)
         self.cls = param["cls"]
+        self.cls.to(self.device)
         self.loss_function = param["loss_function"]
 
         self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers).to(self.device)
@@ -90,7 +92,7 @@ class RNN:
         input = self.embed(char).to(self.device)
 
         out, (hidden, cell) = self.lstm(input, para)
-        out = self.cls(out)
+        out = self.cls(out).to(self.device)
         prob = nn.functional.softmax(out[-1], dim=1).data
 
         char_ind = self.dict_size - 2
@@ -153,7 +155,6 @@ class RNN:
 
     def train(self, nb_epochs):
         print("Début de l'Entraînement")
-
         nb_training_files = training_file_number_choice(len(self.input_list))
         training_files, test_files = training_file_choice(self.input_list, nb_training_files)
 
