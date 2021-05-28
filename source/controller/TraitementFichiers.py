@@ -46,7 +46,7 @@ def ecrire_fichier(nom, donnees):
 
 
 def get_rnn_parameters(parametres):
-    l = "TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,NombreSequenceBatch"
+    l = "TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,NombreSequenceBatch,TypeGeneration"
     p = []
     for key in l.split(","):
         p.append(parametres[key])
@@ -139,6 +139,7 @@ def check_conversions(parametres):  # anciennement main
     os.makedirs(parametres["URL_Dossier"]+os.sep+"Conversion_melodie", exist_ok=True)
     os.makedirs(parametres["URL_Dossier"]+os.sep+"Resultat", exist_ok=True)
     os.makedirs(parametres["URL_Dossier"]+os.sep+"Graphiques", exist_ok=True)
+    os.makedirs(parametres["URL_Dossier"]+os.sep+"Modèles save", exist_ok=True)
 
     # on récupère tous les fichier csv du dossier csv avec addresse: csv_path
     csv_path = parametres["URL_Dossier"] + os.sep + "CSV"
