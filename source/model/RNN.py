@@ -155,6 +155,7 @@ class RNN:
 
     def train(self, nb_epochs):
         print("Début de l'Entraînement")
+        self.lstm.train()
         nb_training_files = training_file_number_choice(len(self.input_list))
         training_files, test_files = training_file_choice(self.input_list, nb_training_files)
 
