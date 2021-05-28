@@ -19,7 +19,9 @@ class Application(tkinter.Tk):
         # Initialisation d'une fenetre TKinter
         tkinter.Tk.__init__(self)
         # Affectation du titre de la fenêtre
-        self.title("Génération musique aléatoire")
+        self.title("MusicBox")
+        # icon de l'app
+        self.iconbitmap("." + os.sep + "source" + os.sep + "view" + os.sep + "icon" + os.sep + "icon.ico")
         # Réglage du fond en blanc
         self.configure(bg='white')
 
@@ -30,8 +32,8 @@ class Application(tkinter.Tk):
         # Parametre par defaut
         ##########################################################################
         self.parametres = {"URL_Dossier": os.getcwd()+os.sep+"data"+os.sep+"midi",
-                           "NombreMorceaux": "1",
-                           "DureeMorceaux": "60",
+                           "NombreMorceaux": "2",
+                           "DureeMorceaux": "30",
                            "TonaliteMorceaux": "A",
                            "VitesseMorceaux": "30",
                            "TypeGeneration": "Rythme et mélodie",
@@ -45,6 +47,8 @@ class Application(tkinter.Tk):
 
         if "parametres.csv" in path:  # Si un fichier de configuration existe
             self.parametres = ImportExportParametres.importFromCSV()  # on le charge dans self.parametres
+            self.parametres["NombreMorceaux"] = "2"
+            self.parametres["DureeMorceaux"] = "30"
 
         # on crée le dossier Resultat s'il n'existe pas
         os.makedirs(self.parametres["URL_Dossier"]+os.sep+"Resultat", exist_ok=True)
