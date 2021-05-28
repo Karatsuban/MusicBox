@@ -20,6 +20,7 @@ class RNN:
         self.hidden_dim = int(param_list[2])        # taille de la dimension cachée
         self.nb_layers = int(param_list[3])         # nombre de couches
         self.batch_size = int(param_list[4])        # nombre de séquences dans un batch
+        self.type_gen = param_list[5]               # type de génération choisi
 
         # définition des dictionaires de notes vers index et invers
         self.dict_int2val = None           # liste des dictionnaires de traduction de int vers val
@@ -62,11 +63,13 @@ class RNN:
             "cls": self.cls,
             "loss_function": self.loss_function,
             "optimizer_state_dict": self.optimizer.state_dict(),
+            "TypeGeneration" : self.type_gen,
         }
         return parametres
 
     def setParametres(self, param):
         # vérifier si on a besoin de passer les objets sur un device
+        self.type_gen = param["TypeGeneration"]
         self.hidden_dim = param["NombreDimensionCachee"]
         self.nb_layers = param["NombreLayer"]
         self.dict_int2val = param["dict_int2val"]
@@ -154,8 +157,8 @@ class RNN:
         return self.input_list[:self.batch_size]  # on prend les self.batch_size premières séquences
 
     def train(self, nb_epochs):
-        print("Début de l'Entraînement")
         self.lstm.train()
+        print("Début de l'Entraînement")
         nb_training_files = training_file_number_choice(len(self.input_list))
         training_files, test_files = training_file_choice(self.input_list, nb_training_files)
 
