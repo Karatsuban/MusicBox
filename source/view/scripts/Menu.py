@@ -251,7 +251,6 @@ class Menu(tkinter.Frame):
         if "." in self.nbSeqBatch.get() or int(float(self.nbSeqBatch.get())) < 1 or int(float(self.nbSeqBatch.get())) > 512:
             valide = False
 
-
         if not valide:
             tkinter.messagebox.showwarning("Attention", "Attention : un des paramètre saisi est incorrect! \n Veuillez bien respecter les indications.")
         return valide
@@ -286,7 +285,7 @@ class Menu(tkinter.Frame):
     def newModel(self):
         if self.is_model:
             choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours d'utilisation, voulez-vous l'enregistrer ?")
-            temp = getDate()
+            temp = "Model "+getDate()
             if choice is not None:
                 if choice:  # oui
                     filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
@@ -298,27 +297,23 @@ class Menu(tkinter.Frame):
                     self.nbLayer["state"] = tkinter.NORMAL
 
     def saveModel(self):
-        temp = getDate()
+        temp = "Model "+getDate()
         if not self.is_model:
             tkinter.messagebox.showinfo("Attention", "Il n'y a pas de modèle en cours d'utilisation")
         else:
             filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-            if filename == "":
-                tkinter.messagebox.showerror("Erreur", "Pas de fichier choisi !")
-            else:
+            if filename != "":
                 TraitementFichiers.saveModel(filename)
 
     def loadModel(self):
-        temp = getDate()
+        temp = "Model "+getDate()
         choice = True
         if self.is_model:
             choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours, souhaitez-vous l'enregistrer ?")
             if choice is not None:
                 if choice:
                     filename = tkinter.filedialog.asksaveasfilename(defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-                    if filename == "":
-                        tkinter.messagebox.showerror("Erreur", "Pas de fichier choisi !")
-                    else:
+                    if filename != "":
                         TraitementFichiers.saveModel(filename)
         # peut-être rajouter une variable is_saved pour savoir si le fichier a été sauvegardé ou pas
         if choice is not None:  # l'utilisateur n'a pas choisi 'cancel'
@@ -327,14 +322,12 @@ class Menu(tkinter.Frame):
                 user_parametres = self.getParametres()  # on récupère les paramètres entrés par l'utilisateur
                 model_params = TraitementFichiers.loadModel(filename, user_parametres)  # on récupère les paramètres du modèle chargé
                 self.varNbLayer.set(model_params["NombreLayer"])  # on set les valeurs de nbLayer et nbDimCachee avec les paramètres du modèle chargé
-                self.varDimCach.set(self.parametres["NombreDimensionCachee"])
+                self.varDimCach.set(model_params["NombreDimensionCachee"])
                 self.is_model = True
                 if self.paramsAvancesValue == 1:
                     self.nbDimCachee["state"] = tkinter.DISABLED
                     self.nbLayer["state"] = tkinter.DISABLED
                 self.genParamsButton["state"] = tkinter.NORMAL
-            else:
-                tkinter.messagebox.showerror("Erreur", "Pas de fichier choisi !")
 
 
 def credits():
@@ -343,6 +336,7 @@ def credits():
 
 def about():
     tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 1.5, 2021")
+
 
 def github():
     webbrowser.open("https://github.com/Karatsuban/MusicBox", new=0)
@@ -386,6 +380,7 @@ def centrefenetre(fen):
     fen.update_idletasks()
     l, h, x, y = geoliste(fen.geometry())
     fen.geometry("%dx%d%+d%+d" % (l, h, (fen.winfo_screenwidth() - l) // 2, (fen.winfo_screenheight() - h) // 2))
+
 
 def getDate():
     date = datetime.datetime.now()
