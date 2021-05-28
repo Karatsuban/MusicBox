@@ -24,7 +24,7 @@ def saveModel(save_path):
 
 def loadModel(load_path, user_param):
     global rnn_object
-    load_params = torch.load(load_path)  # on lit le fichier de sauvegarde
+    load_params = torch.load(load_path, map_location=torch.device('cpu'))  # on lit le fichier de sauvegarde
     check_conversions(user_param)  # on vérifie que toutes les conversions ont bien eu lieu
     param_list = get_rnn_parameters(user_param)
     input_list = get_input_liste(user_param)
