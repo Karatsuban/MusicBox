@@ -170,7 +170,7 @@ class Menu(tkinter.Frame):
         # Création et placement du Bouton Lecteur
         self.textBoutonLecteur = tkinter.StringVar()
         self.textBoutonLecteur.set("Accès direct au lecteur")
-        self.Lecteur = tkinter.Button(self, textvariable=self.textBoutonLecteur, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [self.saveParametres(), master.switch_frame()])
+        self.Lecteur = tkinter.Button(self, textvariable=self.textBoutonLecteur, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [self.saveParametres(), master.switch_frame("Lecteur")])
         self.Lecteur.grid(row=16, column=0, sticky="EW")
 
         # Création et placement du Bouton valider
@@ -191,7 +191,7 @@ class Menu(tkinter.Frame):
         if self.valide():
             self.saveParametres()
             TraitementFichiers.genereNew(self.parametres)
-            master.switch_frame()
+            master.switch_frame("Lecteur")
         return
 
     def exportParametres(self):
@@ -261,12 +261,12 @@ class Menu(tkinter.Frame):
                 self.genParamsButton["state"] = tkinter.NORMAL
 
             self.saveParametres()
-            TraitementFichiers.train(self.parametres, self.is_model)
-            self.is_model = True
             if self.paramsAvancesValue == 1:
                 self.nbDimCachee["state"] = tkinter.DISABLED
                 self.nbLayer["state"] = tkinter.DISABLED
                 self.typeGenComboboite["state"] = tkinter.DISABLED
+            self.master.switch_frame("Info")
+            self.is_model = True
         return
 
     # Méthode pour l'explorateur de fichier

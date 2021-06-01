@@ -52,7 +52,7 @@ class Lecteur(tkinter.Frame):
 
         # Combobox listant tous les titres
         self.titreMusique = ""
-        self.comboTitres = ttk.Combobox(self, state="readonly", width=30)
+        self.comboTitres = ttk.Combobox(self, state="readonly", width=60)
         # Placement
         self.comboTitres.grid(row=1, column=0, columnspan=3)
         self.comboTitres.bind("<<ComboboxSelected>>", lambda e: [master.focus(), self.selectionMusique("<<ComboboxSelected>>")])
@@ -104,7 +104,7 @@ class Lecteur(tkinter.Frame):
 
         # Bouton Retour
         # Creation du bouton retour, relié à la classe menu
-        self.retourMenu = tkinter.Button(self, text="Retour", font=self.texte, command=lambda: [self.stop(), master.switch_frame()])
+        self.retourMenu = tkinter.Button(self, text="Retour", font=self.texte, command=lambda: [self.stop(), master.switch_frame("Menu")])
         # Placement
         self.retourMenu.grid(row=7, column=0, sticky="WS")
         # Réglage de la bordure du bouton et du background

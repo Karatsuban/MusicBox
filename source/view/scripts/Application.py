@@ -2,7 +2,7 @@
 
 import tkinter
 import tkinter.filedialog
-from source.view.scripts import Lecteur, Menu
+from source.view.scripts import Lecteur, Menu, Info
 from source.controller import ImportExportParametres
 import os
 
@@ -24,9 +24,11 @@ class Application(tkinter.Tk):
         # Réglage du fond en blanc
         self.configure(bg='white')
 
-        self.tailleLecteur = "525x295"
-        self.tailleMenu = "525x680"
-
+        self.dicoTaille = {
+            "Lecteur": "525x295",
+            "Menu": "525x680",
+            "Info": "280x120",
+        }
         ########################################################################
         # Parametre par defaut
         ##########################################################################
@@ -52,32 +54,33 @@ class Application(tkinter.Tk):
         # on crée le dossier Resultat s'il n'existe pas
         os.makedirs(self.parametres["URL_Dossier"]+os.sep+"Resultat", exist_ok=True)
 
-        # Création des objets Menu et Lecteur
-        self.fenetreMenu = Menu.Menu(self, self.parametres)
-        self.fenetreLecteur = Lecteur.Lecteur(self, self.parametres)
+        self.dicoFrame = {
+            "Lecteur": Lecteur.Lecteur(self, self.parametres),
+            "Menu": Menu.Menu(self, self.parametres),
+            "Info": Info.Info(self),
+        }
 
         # frame de base
-        self.frame = self.fenetreLecteur
+        self.frame = self.dicoFrame["Lecteur"]
 
-        self.switch_frame()
+        self.switch_frame("Menu")
 
     # Cette méthode permet de changer la fame affichée dans la fenetre principale
-    def switch_frame(self):
-        self.frame.grid_remove()  # on cache la frame actuelle
+    def switch_frame(self, frame):
+        self.frame.grid_remove()
+        self.frame = self.dicoFrame[frame]
+        self.parametres = self.dicoFrame["Menu"].getParametres()
 
-        if self.frame == self.fenetreMenu:
-            self.frame = self.fenetreLecteur
-            taille = self.tailleLecteur
-            self.parametres = self.fenetreMenu.getParametres()  # on récupère les paramètres mis à jour par fenetreMenu
-            self.fenetreLecteur.miseAJourRepertoire(self.parametres)  # on les transmet à l'objet fenetreLecteur
-        else:
-            self.frame = self.fenetreMenu
-            taille = self.tailleMenu
-
-        self.geometry(taille)  # Réglage de la taille de la fenêtre
-
-        # Affectation du cadre à la fenetre et réglage des marges
+        taille = self.dicoTaille[frame]
+        self.geometry(taille)
         self.frame.grid(padx=20, pady=15, sticky="ewsn")
+
+        if frame == "Lecteur":
+            self.frame.miseAJourRepertoire(self.parametres)
+        if frame == "Info":
+            is_model = self.dicoFrame["Menu"].is_model
+            self.frame.lanceTrain(self.parametres, is_model)
+
 
     def popupmsg(self, texte):
         popup = tkinter.Tk()
