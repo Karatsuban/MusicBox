@@ -139,7 +139,7 @@ class RNN:
         self.dict_size = len(self.dict_int2val) + 2            # on stocke la longueurs du dico (+2 pour BOS et EOS)
 
         # on crée notre embedding
-        self.embed_size = 2 * ceil(log(self.dict_size, 2))
+        self.embed_size = 100  # 2 * ceil(log(self.dict_size, 2))
         self.embed = nn.Embedding(self.dict_size, self.embed_size)
         self.embed = self.embed.to(self.device)
 
@@ -156,7 +156,7 @@ class RNN:
         np.random.shuffle(self.input_list)  # on mélange les séquences
         return self.input_list[:self.batch_size]  # on prend les self.batch_size premières séquences
 
-    def train(self, nb_epochs):
+    def train(self, nb_epochs, queue, finQueue):
         self.lstm.train()
         print("Début de l'Entraînement")
         nb_training_files = training_file_number_choice(len(self.input_list))
@@ -169,8 +169,11 @@ class RNN:
         previous = start
 
         loss = 0
-        for epoch in range(1, nb_epochs+1):
+        continu = True
+        epoch = 1
+        info = ""
 
+        while continu:
             batch_seq = self.pick_batch()  # on récup une ligne au hasard parmi toutes les seq de training (pour l'instant UNE seule)
             input_seq = []
             target_seq = []
@@ -204,14 +207,25 @@ class RNN:
             err.backward()
             self.optimizer.step()
 
-            if epoch % 100 == 0:
+            if epoch % 1 == 0:
                 print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, nb_epochs, loss/100, time.time() - previous))
                 previous = time.time()
                 loss = 0
                 self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
+
+            queue.put(str(epoch) + ":" + str(self.nb_epochs) + ":" + str(time.time() - start))
+            epoch += 1
+
+            if not finQueue.empty():
+                info = finQueue.get()
+
+            if epoch == nb_epochs+1 or info == "FIN":
+                continu = False
+
+
         print("Entraînement fini")
         print("Temps total : ", time.time()-start)
-        x = [k for k in range(nb_epochs)]
+        x = [k for k in range(epoch-1)]
         plt.plot(x, list_loss)
         plt.show(block=False)
 
