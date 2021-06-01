@@ -249,14 +249,14 @@ def check_conversions(parametres):  # anciennement main
         print("--------------------------------------")
 
 
-def train(parametres, is_model):
+def train(parametres, is_model, queue, finQueue):
     global rnn_object
     rnn_parametres = get_rnn_parameters(parametres)
     check_conversions(parametres)  # on vérifie que toutes les conversions ont bien été faites
     liste_textes = get_input_liste(parametres)
     if not is_model:  # s'il n'y a pas de modèle en cours...
         rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # ...on crée un modèle avec les bons paramètres
-    rnn_object.train(int(parametres["NombreEpoch"]))  # on entraîne le modèle
+    rnn_object.train(int(parametres["NombreEpoch"]), queue, finQueue)  # on entraîne le modèle
 
 
 def get_input_liste(parametres):
