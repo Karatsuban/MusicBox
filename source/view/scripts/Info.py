@@ -38,7 +38,7 @@ class Info(tkinter.Frame):
         self.thread = None
 
     def lanceTrain(self, parametres, is_model):
-        # mettre traitementFichiers dans thread
+        # mettre traitementFichiers dans thread.
 
         self.thread = threading.Thread(target=TraitementFichiers.train, args=(parametres, is_model, self.queue, self.finQueue), daemon=True)
         self.thread.start()
