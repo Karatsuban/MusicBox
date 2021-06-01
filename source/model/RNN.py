@@ -172,6 +172,7 @@ class RNN:
         continu = True
         epoch = 1
         info = ""
+        printInterval = 1
 
         while continu:
             batch_seq = self.pick_batch()  # on récup une ligne au hasard parmi toutes les seq de training (pour l'instant UNE seule)
@@ -207,13 +208,13 @@ class RNN:
             err.backward()
             self.optimizer.step()
 
-            if epoch % 1 == 0:
-                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, nb_epochs, loss/100, time.time() - previous))
+            if epoch % printInterval == 0:
+                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, nb_epochs, loss/printInterval, time.time() - previous))
                 previous = time.time()
                 loss = 0
                 self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
 
-            queue.put(str(epoch) + ":" + str(self.nb_epochs) + ":" + str(time.time() - start))
+            queue.put(str(epoch) + ":" + str(nb_epochs) + ":" + str(time.time() - start))
             epoch += 1
 
             if not finQueue.empty():
