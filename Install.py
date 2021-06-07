@@ -3,7 +3,7 @@ import pkg_resources
 
 def installRequiredPackages():
 
-    required ={'pygame','pillow','numpy','py-midicsv','torch'}
+    required ={'pygame','pillow','numpy','py-midicsv','torch','matplotlib'}
     installed = {pkg.key for pkg in pkg_resources.working_set}
     missing = required - installed
 
