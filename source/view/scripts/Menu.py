@@ -340,7 +340,7 @@ def credits():
 
 
 def about():
-    tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 1.5, 2021")
+    tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 2.0.0, 2021")
 
 
 def github():
