@@ -1,5 +1,5 @@
 # coding:utf-8
-
+import time
 import tkinter
 import tkinter.font as tkFont
 from source.controller import TraitementFichiers
@@ -31,22 +31,30 @@ class Info(tkinter.Frame):
         self.restantLabel = tkinter.Label(self, textvariable=self.restant, bg='white').grid(row=1, column=1)
 
         # bouton pour arrêter l'entrainement
-        self.stopTrainButton = tkinter.Button(self, text="Arrêt entraînement", width=20,command=lambda: [self.stopTrain()]).grid(row=2, column=0)
+        self.stopTrainButton = tkinter.Button(self, text="Arrêt entraînement", width=20, command=lambda: [self.stopTrain()]).grid(row=2, column=0)
 
         self.queue = queue.Queue()
         self.finQueue = queue.Queue(maxsize=1)
         self.thread = None
 
+        self.time_received = 0  # heure de reception du dernier message
+        self.temps_restant = 0  # temps restant avant la fin du train
+
     def lanceTrain(self, parametres, is_model):
         # mettre traitementFichiers dans thread.
+
+        self.avancement.set("../..")  # rafraîchissement de l'affichage
+        self.restant.set("..s")
+        self.time_received = 0
+        self.temps_restant = 0
 
         self.thread = threading.Thread(target=TraitementFichiers.train, args=(parametres, is_model, self.queue, self.finQueue), daemon=True)
         self.thread.start()
         self.after(0, self.updateEpoch())
 
     def stopTrain(self):
-        print("Arrête train")
-        self.finQueue.put("FIN")
+        print("Arrêt train")
+        self.finQueue.put("FIN")  # envoi du signal d'arrêt au modèle
 
     def updateEpoch(self):
         if not self.thread.is_alive() and self.queue.empty():
@@ -56,10 +64,13 @@ class Info(tkinter.Frame):
         while not self.queue.empty():
             infos = self.queue.get().split(":")
             epoch = infos[0]+"/"+infos[1]
-            restant = (float(infos[2]) / float(infos[0])) * (float(infos[1]) - float(infos[0]))
+            self.temps_restant = (float(infos[2]) / float(infos[0])) * (float(infos[1]) - float(infos[0]))
 
+            self.time_received = time.time()  # temps de reception du dernier message
             self.avancement.set(epoch)
-            self.restant.set(str(int(restant))+"s")
+
+        temp = max(0.0, self.temps_restant - (time.time() - self.time_received))
+        self.restant.set(str(int(temp))+"s")
 
         self.after(100, lambda: self.updateEpoch())
         return
