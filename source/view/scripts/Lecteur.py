@@ -4,6 +4,8 @@
 import tkinter
 import tkinter.font as tkFont
 from tkinter import ttk, messagebox
+import subprocess
+import platform
 import pygame
 import os
 
@@ -46,61 +48,61 @@ class Lecteur(tkinter.Frame):
         self.master.protocol('WM_DELETE_WINDOW', lambda: [pygame.mixer.music.stop(), self.master.destroy()])
 
         # Titre
-        tkinter.Label(self, text="Résultat de la génération", font=self.titre, height=hauteurBout, bg='white').grid(row=0, column=0, sticky="W")
+        tkinter.Label(self, text="Résultat de la génération", font=self.titre, height=hauteurBout, bg='white').grid(row=0, column=0, columnspan=4, sticky="W")
         # Titre de la musique en cours
-        self.boxTitreMusique = tkinter.Label(self, text="Titre: ", bg='white', font=self.texte).grid(row=1, column=0, sticky="w")
+        self.boxTitreMusique = tkinter.Label(self, text="Titre:", bg='white', font=('Helvetica', 16)).grid(row=2, column=0, sticky="w")
 
         # Combobox listant tous les titres
         self.titreMusique = ""
-        self.comboTitres = ttk.Combobox(self, state="readonly", width=60)
+        self.comboTitres = ttk.Combobox(self, state="readonly", width=30)
         # Placement
-        self.comboTitres.grid(row=1, column=0, columnspan=3)
+        self.comboTitres.grid(row=2, column=1, columnspan=3)
         self.comboTitres.bind("<<ComboboxSelected>>", lambda e: [master.focus(), self.selectionMusique("<<ComboboxSelected>>")])
 
         # Bouton Previous Song
         # Affectation d'une image de bouton à une variable
-        self.previousSongImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "sl1.png")
+        self.previousSongImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "sl1.gif")
         # Création du bouton
         self.previousSongButton = tkinter.Button(self)
         # Placement du bouton
-        self.previousSongButton.grid(row=3, column=0, sticky="W")
+        self.previousSongButton.grid(row=4, column=0)
         # Quelques réglages d'apparence : couleur du background, épaisseur des bordures, et affectation de l'image au bouton
         self.previousSongButton.config(image=self.previousSongImage, bd=0, bg='white', command=lambda: [self.previousSong()])
-        self.grid(row=3, column=0, pady=(100, 10))
+        #self.grid(row=4, column=0)
 
         # Bouton Play
         # Affectation d'une image de bouton à une variable
-        self.playImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "pl1.png")
+        self.playImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "pl1.gif")
         # Création du bouton
         self.playButton = tkinter.Button(self)
         # Placement du bouton
-        self.playButton.grid(row=3, column=0)
+        self.playButton.grid(row=4, column=1)
         # Quelques réglages d'apparence : couleur du background, épaisseur des bordures, et affectation de l'image au bouton
         self.playButton.config(image=self.playImage, bd=0, bg='white', command=lambda: [self.play()])
 
         # Bouton Pause
         # Affectation d'une image de bouton à une variable
-        self.pauseImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "pa1.png")
+        self.pauseImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "pa1.gif")
         # Création du bouton
         self.pauseButton = tkinter.Button(self)
         # Placement du bouton
-        self.pauseButton.grid(row=3, column=0, sticky="e")
+        self.pauseButton.grid(row=4, column=2)
         # Quelques réglages d'apparence : couleur du background, épaisseur des bordures, et affectation de l'image au bouton
         self.pauseButton.config(image=self.pauseImage, bd=0, bg='white', command=lambda: [self.pause()])
 
         # Bouton Next Song
         # Affectation d'une image de bouton à une variable
-        self.nextSongImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "sr1.png")
+        self.nextSongImage = tkinter.PhotoImage(file="." + os.sep + "source" + os.sep + "view" + os.sep + "button" + os.sep + "sr1.gif")
         # Création du bouton
         self.nextSongButton = tkinter.Button(self)
         # Placement du bouton
-        self.nextSongButton.grid(row=3, column=2)
+        self.nextSongButton.grid(row=4, column=3)
         # Quelques réglages d'apparence : couleur du background, épaisseur des bordures, et affectation de l'image au bouton
         self.nextSongButton.config(image=self.nextSongImage, bd=0, bg='white', command=lambda: [self.nextSong()])
 
         # Un espace
         tkinter.Label(self, text=" ", bg="white").grid(row=6)
-        tkinter.Label(self, text=" ", bg="white").grid(row=2)
+        tkinter.Label(self, text=" ", bg="white").grid(row=3)
 
         # Bouton Retour
         # Creation du bouton retour, relié à la classe menu
@@ -114,7 +116,7 @@ class Lecteur(tkinter.Frame):
         # Création du bouton
         self.deleteButton = tkinter.Button(self, text="Accéder au dossier", font=self.texte, command=lambda: [self.opendir()])
         # Placement
-        self.deleteButton.grid(row=7, column=2, sticky="W")
+        self.deleteButton.grid(row=7, column=2, columnspan=2, sticky="E")
         # Réglage du background
         self.deleteButton.config(bg='white', bd=1)
 
@@ -122,11 +124,11 @@ class Lecteur(tkinter.Frame):
         # Création du bouton
         self.deleteButton = tkinter.Button(self, text="Supprimer les fichiers", font=self.texte, command=lambda: [self.supprimerFichiers()])
         # Placement
-        self.deleteButton.grid(row=8, column=2, sticky="W")
+        self.deleteButton.grid(row=8, column=2, columnspan=2, sticky="E")
         # Réglage du background
         self.deleteButton.config(bg='white', bd=1)
 
-        # mise à jour du répértoire des musiques        
+        # mise à jour du répértoire des musiques
         self.miseAJourRepertoire(self.parametres)
 
     def supprimerFichiers(self):
@@ -219,8 +221,13 @@ class Lecteur(tkinter.Frame):
     def opendir(self):
         print(self.URL)
         dir = os.path.dirname(self.URL)
-        os.system('explorer ' + dir)
-
+        osName = platform.system()
+        if osName == "Windows":
+            os.system('explorer ' + dir)
+        elif osName == "Darwin":
+            subprocess.Popen(["open", dir])
+        else:
+            subprocess.Popen(["xdg-open", dir])
 
 def initLecteur():
     # initialisation du lecteur

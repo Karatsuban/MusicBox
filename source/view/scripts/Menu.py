@@ -124,10 +124,10 @@ class Menu(tkinter.Frame):
 
         # Création et placement du label Taux apprentissage
         varTxApp = tkinter.StringVar(self)
-        varTxApp.set(self.parametres["TauxApprentissage"])
+        varTxApp.set(float(self.parametres["TauxApprentissage"]))
         tkinter.Label(self, text="Taux apprentissage", height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=9, column=0, sticky="W")
         # Création et placement d'une spinbox pour choisir le taux d'apprentissage
-        self.txApprentissage = tkinter.Spinbox(self, from_=0, to=1, width=10, format='%6.5f', increment=0.0001, textvariable=varTxApp, state=tkinter.DISABLED)
+        self.txApprentissage = tkinter.Entry(self, textvariable=varTxApp, width=11, state=tkinter.DISABLED)
         self.txApprentissage.grid(row=9, column=1, sticky="W")
         tkinter.Label(self, text="(0-1)", bg="white").grid(row=9, column=1, sticky="e")
 
@@ -186,6 +186,7 @@ class Menu(tkinter.Frame):
         # bouton pour générer d'autres morceaux
         self.genParamsButton = tkinter.Button(self, text="Générer morceaux", state=tkinter.DISABLED, width=20, bg="white", command=lambda: [self.genereNewMorceau(master)])
         self.genParamsButton.grid(row=17, column=1, sticky="E")
+
 
     def genereNewMorceau(self, master):
         if self.valide():
