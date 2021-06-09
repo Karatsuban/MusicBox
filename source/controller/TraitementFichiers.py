@@ -36,7 +36,9 @@ def lire_fichier(nom):
     file = open(nom, 'r')
     lines = file.readlines()
     file.close()
-    return "".join(lines)  # on retourne la concaténation des lignes du fichier
+    for a in range(len(lines)):
+        lines[a] = lines[a].replace("\n", "")
+    return lines
 
 
 def ecrire_fichier(nom, donnees):
@@ -268,7 +270,8 @@ def get_input_liste(parametres):
 
     for m in os.listdir(format_path):
         content = lire_fichier(format_path + os.sep + m)
-        liste_textes.append(content)  # recuperation des donnees
+        liste_textes += content  # recuperation des donnees
+    print(liste_textes)
     return liste_textes
 
 
