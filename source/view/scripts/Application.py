@@ -4,6 +4,7 @@ import tkinter
 import tkinter.filedialog
 from source.view.scripts import Lecteur, Menu, Info
 from source.controller import ImportExportParametres
+import platform
 import os
 
 if os.name != "posix":
@@ -24,11 +25,25 @@ class Application(tkinter.Tk):
         # Réglage du fond en blanc
         self.configure(bg='white')
 
-        self.dicoTaille = {
-            "Lecteur": "525x295",
-            "Menu": "525x680",
-            "Info": "280x120",
-        }
+        osName = platform.system()
+        if osName == "Windows":
+            self.dicoTaille = {
+                "Lecteur": "390x295",
+                "Menu": "525x680",
+                "Info": "300x120",
+            }
+        elif osName == "Darwin":
+            self.dicoTaille = {
+                "Lecteur": "410x265",
+                "Menu": "525x680",
+                "Info": "300x120",
+            }
+        else:
+            self.dicoTaille = {
+                "Lecteur": "400x275",
+                "Menu": "600x650",
+                "Info": "300x120",
+            }
         ########################################################################
         # Parametre par defaut
         ##########################################################################
@@ -112,6 +127,7 @@ def start():
     app = Application()
     # icon de l'app
     app.iconbitmap("." + os.sep + "source" + os.sep + "view" + os.sep + "icon" + os.sep + "icon.ico")
+
     # Centrage du futur affichage
     centrefenetre(app)
     # mettre en premier plan au lancement
