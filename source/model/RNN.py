@@ -7,7 +7,7 @@ import numpy as np
 import time
 from math import ceil, log
 import random
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 class RNN:
@@ -37,7 +37,15 @@ class RNN:
         self.loss_function = None
         self.optimizer = None
 
+        # définition des variables pour la création des batch
+        self.shuffle = False
+        self.debut_pick = 0
+
+        # pré-traitement de la liste des morceaux et création des listes des morceaux d'entraînement et de test
         self.input_list = [a.split() for a in self.input_list]
+        self.training_files = None
+        self.test_files = None
+        self.split_input()  # découpage de input_list
 
         # correction du nombre de morceaux par batch
         self.batch_size = 2 ** ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min entre batch_size et le nombre de sequences d'entrée
@@ -63,7 +71,7 @@ class RNN:
             "cls": self.cls,
             "loss_function": self.loss_function,
             "optimizer_state_dict": self.optimizer.state_dict(),
-            "TypeGeneration" : self.type_gen,
+            "TypeGeneration": self.type_gen,
         }
         return parametres
 
@@ -89,12 +97,11 @@ class RNN:
         self.optimizer.load_state_dict(param["optimizer_state_dict"])
 
     # This function takes in the model and character as arguments and returns the next character prediction and hidden state
-    def predict(self, id, para):
-        # One-hot encoding our input to fit into the model
-        char = torch.tensor([[id]]).to(self.device)
-        input = self.embed(char).to(self.device)
+    def predict(self, index, para):
+        char = torch.tensor([[index]]).to(self.device)
+        model_input = self.embed(char).to(self.device)
 
-        out, (hidden, cell) = self.lstm(input, para)
+        out, (hidden, cell) = self.lstm(model_input, para)
         out = self.cls(out).to(self.device)
         prob = nn.functional.softmax(out[-1], dim=1).data
 
@@ -109,24 +116,21 @@ class RNN:
         self.lstm.eval()  # eval mode
         # First off, run through the starting characters
         chars = []
-        input = self.dict_size - 2  # indice du BOS
+        model_input = self.dict_size - 2  # indice du BOS
         hidden = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
         cell = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
         # Now pass in the previous characters and get a new one
         for ii in range(max_len):
-            output, (hidden, cell) = self.predict(input, (hidden, cell))
-            if output == self.dict_size - 1:
+            modele_output, (hidden, cell) = self.predict(model_input, (hidden, cell))
+            if modele_output == self.dict_size - 1:
                 break  # si c'est EOS, on a fini le morceau
             else:
-                chars.append(self.dict_int2val[output])
-            input = output
+                chars.append(self.dict_int2val[modele_output])
+            model_input = modele_output
 
         return ' '.join(chars)
 
     def prepare(self):
-
-        training_text = []  # liste des training files de longueur taille+1 que l'on va découper
-        test_text = []  # liste des tests files de longueur taille+1 que l'on va découper
 
         # on parcourt tous les n-uplets un par un et on crée les dictionnaires associés à chaque valeur du n-uplet
         chars = set()  # notre ensemble
@@ -153,14 +157,26 @@ class RNN:
         self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
 
     def pick_batch(self):
-        np.random.shuffle(self.input_list)  # on mélange les séquences
-        return self.input_list[:self.batch_size]  # on prend les self.batch_size premières séquences
+        L = []
+        to_pick = self.batch_size
+        while to_pick != 0:  # tant qu'on a pas pas self.batch_size sequences
+            if self.shuffle:  # on doit mélanger la liste
+                self.shuffle = False
+                np.random.shuffle(self.training_files)  # on mélange les séquences
+
+            seq_left = len(self.training_files) - self.debut_pick  # nombre de séquences non choisies
+            a_prendre = min(to_pick, seq_left)  # nombre de séquences maximum que l'on peut prendre parmi les restantes
+            L += self.training_files[self.debut_pick:self.debut_pick+a_prendre]  # on prend ces séquences
+            to_pick -= a_prendre  # on diminue le nombre de séquences à prendre
+            self.debut_pick += a_prendre  # on déplace l'index à partir duquel on prendre les séquences
+            if self.debut_pick >= len(self.training_files):  # si l'indice est trop grand
+                self.debut_pick = 0  # on le ramène au début
+                self.shuffle = True  # il faudra mélanger à nouveau
+        return L  # on renvoie les séquences
 
     def train(self, nb_epochs, queue, finQueue):
         self.lstm.train()
         print("Début de l'Entraînement")
-        nb_training_files = training_file_number_choice(len(self.input_list))
-        training_files, test_files = training_file_choice(self.input_list, nb_training_files)
 
         list_loss = []
 
@@ -175,7 +191,7 @@ class RNN:
         printInterval = 1
 
         while continu:
-            batch_seq = self.pick_batch()  # on récup une ligne au hasard parmi toutes les seq de training (pour l'instant UNE seule)
+            batch_seq = self.pick_batch()  # on récupère les séquences de batch
             input_seq = []
             target_seq = []
             for a in range(len(batch_seq)):
@@ -223,12 +239,12 @@ class RNN:
             if epoch == nb_epochs+1 or info == "FIN":
                 continu = False
 
-
         print("Entraînement fini")
         print("Temps total : ", time.time()-start)
-        x = [k for k in range(epoch-1)]
-        plt.plot(x, list_loss)
-        plt.show(block=False)
+
+        # x = [k for k in range(epoch-1)]
+        # plt.plot(x, list_loss)
+        # plt.show(block=False)
 
     def generate(self, nombre, duree):
         print("Génération des morceaux")
@@ -238,23 +254,21 @@ class RNN:
             out.append(self.sample(duree))
         return out
 
+    def split_input(self):
+        # coupe self.input_list en une liste d'entraînement et une liste de test
+        nb_training_files = training_file_number_choice(len(self.input_list))  # on récupère le nombre de fichiers d'entraînement
+        self.training_files, self.test_files = training_file_choice(self.input_list, nb_training_files)  # on récupère les fichiers de test et d'entraînement
+
 
 def distribution_pick(vecteur):
     # prend un vecteur de probabilités et renvoie un indice après un tirage
-    vecteur = vecteur.detach().to('cpu').numpy()[0]
-    nb_elt = len(vecteur)
-    val = random.random()
-    cumul = 0
-    for a in range(nb_elt):
-        cumul += vecteur[a]
-        if val < cumul:
-            return a
-    return nb_elt - 1
+    vecteur = vecteur.detach().to('cpu')[0]
+    return torch.multinomial(vecteur, 1)[0].item()  # on renvoie un seul indice
 
 
 def training_file_number_choice(total):
     # retourne le nombre de fichiers qui seront utilisés pour l'entrainement du RNN mais pas pour les tests
-    return ceil(total * 80/100)  # 80% des fichiers sont utilisés pour l'entraînement
+    return ceil(total * 90/100)  # 80% des fichiers sont utilisés pour l'entraînement
 
 
 def training_file_choice(liste, nb):
