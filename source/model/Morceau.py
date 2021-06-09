@@ -313,6 +313,9 @@ class Morceau:
     def preparer_track_melodie_select(self, L):
         chaine_retour = ""  # chaine de retour
         save = None
+        old_position = L[0][1]
+        numero_mesure = 0
+        max_mesures = 4
         while L != []:
             # L[a] = [note] ou [note, position]
             position = L[0][1]
@@ -331,10 +334,18 @@ class Morceau:
             duree = self.arrondi_note(time2 - time1)
             type_note = self.time_to_note_dict[duree]
 
+            if int(position) < int(old_position):  # lorsqu'on rentre dans une nouvelle mesure
+                numero_mesure += 1
+                if numero_mesure > max_mesures:
+                    chaine_retour += "\n"  # on saute une ligne dans le fichier
+                    numero_mesure = 0
+
             if save is None:
                 chaine_retour = str(time1) + ":" + str(type_note) + ":" + str(note) + ":" + str(position) + " "
             else:
                 chaine_retour += str(time1 - save) + ":" + str(type_note) + ":" + str(note) + ":" + str(position) + " "
+
+            old_position = position
 
             save = time1
 
@@ -363,14 +374,13 @@ class Morceau:
         time2 = 0  # temps de "fin" de la note "0"
         debut_mesure = 0  # temps de début de la mesure
         position = 1
-
         while piste != []:
 
             note_deb = piste[0].split(",")
-            time1 = int(note_deb[1])  # début de la note
+            time1 = int(note_deb[1])  # temps de début de la note
             touche = int(note_deb[4])  # numéro de la touche
 
-            if time1 > time2:  # si la note actuelle après la fin de la note précédente
+            if time1 > time2:  # si la note actuelle n'est pas jouée directement après la fin de la note précédente
                 position += 1
 
             b = 0
@@ -378,7 +388,7 @@ class Morceau:
             while int(note_fin[4]) != touche:  # on cherche la note qui termine
                 b += 1
                 note_fin = piste[b].split(",")
-            time2 = int(note_fin[1])  # récupération deuxième temps
+            time2 = int(note_fin[1])  # récupération temps de fin de la note
 
             if time1 - debut_mesure >= duree_mesure:
                 position = 1
@@ -390,6 +400,7 @@ class Morceau:
             position += 1
 
             piste = piste[1:b] + piste[b + 1:]  # on enleve les deux lignes
+
         return L
 
     # *********************************************************************************************
