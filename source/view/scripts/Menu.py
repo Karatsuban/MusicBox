@@ -45,12 +45,19 @@ class Menu(tkinter.Frame):
         self.menuFichier.add_command(label="Sauvegarder", command=self.saveModel)
         self.menuFichier.add_command(label="Charger", command=self.loadModel)
 
+        self.menuParam = tkinter.Menu(self.menuBarre, tearoff=0)
+        self.choisi = tkinter.IntVar()
+        self.menuParam.add_checkbutton(label="Affichage Data Info", variable=self.choisi)
+
+
         self.menuPropos = tkinter.Menu(self.menuBarre, tearoff=0)
         self.menuPropos.add_command(label="À propos", command=about)
         self.menuPropos.add_command(label="Crédits", command=credits)
         self.menuPropos.add_command(label="GitHub", command=github)
 
+
         self.menuBarre.add_cascade(label="Modèle", menu=self.menuFichier)  # Menu déroulant "Fichier"
+        self.menuBarre.add_cascade(label="Paramètre", menu=self.menuParam)  # Menu déroulant "Paramètre"
         self.menuBarre.add_cascade(label="À propos", menu=self.menuPropos)  # Menu déroulant "À propos"
 
         self.master.config(menu=self.menuBarre)
@@ -210,7 +217,9 @@ class Menu(tkinter.Frame):
                            "NombreEpoch": self.nbEpoch.get(),
                            "NombreDimensionCachee": self.nbDimCachee.get(),
                            "NombreLayer": self.nbLayer.get(),
-                           "NombreSequenceBatch": self.nbSeqBatch.get()}
+                           "NombreSequenceBatch": self.nbSeqBatch.get(),
+                           "ChoixAffichageDataInfo": self.choisi.get()
+                           }
 
     def getParametres(self):
         return self.parametres
@@ -320,7 +329,11 @@ class Menu(tkinter.Frame):
                         TraitementFichiers.saveModel(filename)
         # peut-être rajouter une variable is_saved pour savoir si le fichier a été sauvegardé ou pas
         if choice is not None:  # l'utilisateur n'a pas choisi 'cancel'
-            filename = tkinter.filedialog.askopenfilename(initialdir=self.parametres["URL_Dossier"], filetypes=[('tar files', '.tar')]).replace("/", os.sep)
+            loadSavePath = self.parametres["URL_Dossier"] + os.sep + "Modèles save"
+            if not os.path.exists(loadSavePath):
+                loadSavePath = self.parametres["URL_Dossier"]
+            filename = tkinter.filedialog.askopenfilename(initialdir=loadSavePath, filetypes=[('tar files', '.tar')]).replace("/", os.sep)
+
             if filename != '':
                 user_parametres = self.getParametres()  # on récupère les paramètres entrés par l'utilisateur
                 model_params = TraitementFichiers.loadModel(filename, user_parametres)  # on récupère les paramètres du modèle chargé
@@ -333,6 +346,9 @@ class Menu(tkinter.Frame):
                     self.nbLayer["state"] = tkinter.DISABLED
                     self.typeGenComboboite["state"] = tkinter.DISABLED
                 self.genParamsButton["state"] = tkinter.NORMAL
+
+
+
 
 
 def credits():
@@ -395,3 +411,5 @@ def getDate():
     hg = heureG.strftime('%H-%M-%S')
     temp = "".join([dg, " ", hg])
     return temp
+
+

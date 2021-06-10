@@ -57,7 +57,8 @@ class Application(tkinter.Tk):
                            "NombreEpoch": "200",
                            "NombreDimensionCachee": "128",
                            "NombreLayer": "1",
-                           "NombreSequenceBatch": "16"}
+                           "NombreSequenceBatch": "16",
+                           "ChoixAffichageDataInfo": 0}
 
         path = os.listdir(path=os.getcwd() + os.sep + "data")
 
