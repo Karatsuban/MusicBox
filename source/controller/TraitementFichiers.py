@@ -199,13 +199,16 @@ def check_conversions(parametres):  # anciennement main
         if parametres["TypeGeneration"] == "Rythme seulement":
             nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename
             content = m.preparer_track_rythme()  # on récupère toutes les pistes du morceau dans une liste
-            contentString = list2string(content)
-            longTotale += count_long_seq(contentString)
-            for data in contentString:
-                if data in contentTotaleDico:
-                    contentTotaleDico[data] += 1
-                else:
-                    contentTotaleDico[data] = 1
+
+            if parametres["ChoixAffichageDataInfo"] == 1:  # si utilisateur a choisi d'afficher les Data info
+                contentString = list2string(content)
+                longTotale += count_long_seq(contentString)
+                for data in contentString:
+                    if data in contentTotaleDico:
+                        contentTotaleDico[data] += 1
+                    else:
+                        contentTotaleDico[data] = 1
+
             for index in range(len(content)):
                 if content[index] != '':
                     savename = nom+"-"+str(index+1)+".format"
@@ -215,40 +218,43 @@ def check_conversions(parametres):  # anciennement main
             resTab = []
             nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename+".format"
             content = m.preparer_track_melodie()  # on récupère toutes les pistes du morceau
-            contentTab = content.rstrip(' ').split(' ')
-            longTotale += count_long_seq(contentTab)
-            for i in range(len(contentTab)):
-                splitTab = contentTab[i].rstrip(':').split(':')
-                resTab.append(splitTab)
-            for data in resTab:
-                if data[0] in tempDico:
-                    tempDico[data[0]] += 1
-                if data[0] not in tempDico:
-                    tempDico[data[0]] = 1
-                if data[1] in noteDico:
-                    noteDico[data[1]] += 1
-                if data[1] not in tempDico:
-                    noteDico[data[1]] = 1
-                if data[2] in toucheDico:
-                    toucheDico[data[2]] += 1
-                if data[2] not in toucheDico:
-                    toucheDico[data[2]] = 1
-            ecrire_fichier(nom, [content])  # on écrit tout dans un seul morceau
 
-    if parametres["TypeGeneration"] == "Rythme seulement":
-        print("----------Rythme seulement------------")
-        print("****** Nombre total de fichiers entrainés : ", counter)
-        print("****** Moyenne des sequences : ", moyenne_seq(longTotale, counter))
-        print("****** Nombre d'occurence de chaque note des sequences : ", count_freq_dico(contentTotaleDico))
-        print("--------------------------------------")
-    if parametres["TypeGeneration"] == "Rythme et mélodie":
-        print("----------Rythme et mélodie-----------")
-        print("****** Nombre total de fichiers entrainés : ", counter)
-        print("****** Moyenne des sequences : ", moyenne_seq(longTotale, counter))
-        print("****** Nombre d'occurence de chaque temp des sequences : ", len(count_freq_dico(tempDico)), count_freq_dico(tempDico))
-        print("****** Nombre d'occurence de chaque note des sequences : ", len(count_freq_dico(noteDico)), count_freq_dico(noteDico))
-        print("****** Nombre d'occurence de chaque touche des sequences : ", len(count_freq_dico(toucheDico)), count_freq_dico(toucheDico))
-        print("--------------------------------------")
+            if parametres["ChoixAffichageDataInfo"] == 1:
+                contentTab = content.rstrip(' ').split(' ')
+                longTotale += count_long_seq(contentTab)
+                for i in range(len(contentTab)):
+                    splitTab = contentTab[i].rstrip(':').split(':')
+                    resTab.append(splitTab)
+                for data in resTab:
+                    if data[0] in tempDico:
+                        tempDico[data[0]] += 1
+                    if data[0] not in tempDico:
+                        tempDico[data[0]] = 1
+                    if data[1] in noteDico:
+                        noteDico[data[1]] += 1
+                    if data[1] not in tempDico:
+                        noteDico[data[1]] = 1
+                    if data[2] in toucheDico:
+                        toucheDico[data[2]] += 1
+                    if data[2] not in toucheDico:
+                        toucheDico[data[2]] = 1
+
+            ecrire_fichier(nom, [content])  # on écrit tout dans un seul morceau
+    if parametres["ChoixAffichageDataInfo"] == 1:
+        if parametres["TypeGeneration"] == "Rythme seulement":
+            print("----------Rythme seulement------------")
+            print("****** Nombre total de fichiers entrainés : ", counter)
+            print("****** Moyenne des sequences : ", moyenne_seq(longTotale, counter))
+            print("****** Nombre d'occurence de chaque note des sequences : ", count_freq_dico(contentTotaleDico))
+            print("--------------------------------------")
+        if parametres["TypeGeneration"] == "Rythme et mélodie":
+            print("----------Rythme et mélodie-----------")
+            print("****** Nombre total de fichiers entrainés : ", counter)
+            print("****** Moyenne des sequences : ", moyenne_seq(longTotale, counter))
+            print("****** Nombre d'occurence de chaque temp des sequences : ", len(count_freq_dico(tempDico)), count_freq_dico(tempDico))
+            print("****** Nombre d'occurence de chaque note des sequences : ", len(count_freq_dico(noteDico)), count_freq_dico(noteDico))
+            print("****** Nombre d'occurence de chaque touche des sequences : ", len(count_freq_dico(toucheDico)), count_freq_dico(toucheDico))
+            print("--------------------------------------")
 
 
 def train(parametres, is_model, queue, finQueue):
@@ -271,7 +277,6 @@ def get_input_liste(parametres):
     for m in os.listdir(format_path):
         content = lire_fichier(format_path + os.sep + m)
         liste_textes += content  # recuperation des donnees
-    print(liste_textes)
     return liste_textes
 
 
