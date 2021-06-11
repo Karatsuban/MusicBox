@@ -5,8 +5,6 @@ import tkinter.filedialog
 import tkinter.font as tkFont
 from tkinter import ttk, messagebox
 from source.controller import TraitementFichiers, ImportExportParametres
-import datetime
-import webbrowser
 import os
 
 
@@ -36,31 +34,6 @@ class Menu(tkinter.Frame):
         self.is_model = False  # aucun modèle n'a été crée ou chargé
 
         # --------- Configuration ------------ #
-
-        # Barre de Menu
-        self.menuBarre = tkinter.Menu(self.master)
-
-        self.menuFichier = tkinter.Menu(self.menuBarre, tearoff=0)
-        self.menuFichier.add_command(label="Nouveau", command=self.newModel)
-        self.menuFichier.add_command(label="Sauvegarder", command=self.saveModel)
-        self.menuFichier.add_command(label="Charger", command=self.loadModel)
-
-        self.menuParam = tkinter.Menu(self.menuBarre, tearoff=0)
-        self.choisi = tkinter.IntVar()
-        self.menuParam.add_checkbutton(label="Affichage Data Info", variable=self.choisi)
-
-
-        self.menuPropos = tkinter.Menu(self.menuBarre, tearoff=0)
-        self.menuPropos.add_command(label="À propos", command=about)
-        self.menuPropos.add_command(label="Crédits", command=credits)
-        self.menuPropos.add_command(label="GitHub", command=github)
-
-
-        self.menuBarre.add_cascade(label="Modèle", menu=self.menuFichier)  # Menu déroulant "Fichier"
-        self.menuBarre.add_cascade(label="Paramètre", menu=self.menuParam)  # Menu déroulant "Paramètre"
-        self.menuBarre.add_cascade(label="À propos", menu=self.menuPropos)  # Menu déroulant "À propos"
-
-        self.master.config(menu=self.menuBarre)
 
         # Création et placement du titre du cadre
         self.configurationLabel = tkinter.Label(self, text="Configuration", bg='white', font=self.policeTitre).grid(row=0, column=0, sticky="W")
@@ -177,10 +150,10 @@ class Menu(tkinter.Frame):
         # Création et placement du Bouton Lecteur
         self.textBoutonLecteur = tkinter.StringVar()
         self.textBoutonLecteur.set("Accès direct au lecteur")
-        self.Lecteur = tkinter.Button(self, textvariable=self.textBoutonLecteur, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [self.saveParametres(), master.switch_frame("Lecteur")])
+        self.Lecteur = tkinter.Button(self, textvariable=self.textBoutonLecteur, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [self.master.saveParametres(), master.switch_frame("Lecteur")])
         self.Lecteur.grid(row=16, column=0, sticky="EW")
 
-        # Création et placement du Bouton valider
+        # Création et placement du Bouton Entraîner
         self.textBoutonValider = tkinter.StringVar()
         self.textBoutonValider.set("Entraîner")
         self.Valider = tkinter.Button(self, textvariable=self.textBoutonValider, width=20, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [self.charging()])
@@ -197,32 +170,15 @@ class Menu(tkinter.Frame):
 
     def genereNewMorceau(self, master):
         if self.valide():
-            self.saveParametres()
+            self.master.saveParametres()
             TraitementFichiers.genereNew(self.parametres)
             master.switch_frame("Lecteur")
         return
 
     def exportParametres(self):
-        self.saveParametres()
+        self.master.saveParametres()
         ImportExportParametres.exportInCSV(self.parametres)
 
-    def saveParametres(self):
-        self.parametres = {"URL_Dossier": self.urlVar.get(),
-                           "NombreMorceaux": self.nbMorceaux.get(),
-                           "DureeMorceaux": self.dureeMaxMorceau.get(),
-                           "TonaliteMorceaux": self.tonaliteMorceau.get(),
-                           "VitesseMorceaux": self.bpmMorceau.get(),
-                           "TypeGeneration": self.typeGenComboboite.get(),
-                           "TauxApprentissage": self.txApprentissage.get(),
-                           "NombreEpoch": self.nbEpoch.get(),
-                           "NombreDimensionCachee": self.nbDimCachee.get(),
-                           "NombreLayer": self.nbLayer.get(),
-                           "NombreSequenceBatch": self.nbSeqBatch.get(),
-                           "ChoixAffichageDataInfo": self.choisi.get()
-                           }
-
-    def getParametres(self):
-        return self.parametres
 
     def changeInterface(self):
         if self.paramsAvancesValue == 0:  # Enable everyone
@@ -270,7 +226,7 @@ class Menu(tkinter.Frame):
             if not self.is_model:
                 self.genParamsButton["state"] = tkinter.NORMAL
 
-            self.saveParametres()
+            self.master.saveParametres()
             if self.paramsAvancesValue == 1:
                 self.nbDimCachee["state"] = tkinter.DISABLED
                 self.nbLayer["state"] = tkinter.DISABLED
@@ -292,75 +248,6 @@ class Menu(tkinter.Frame):
             else:
                 tkinter.messagebox.showerror('Erreur', "Il y a pas de fichier .mid dans ce dossier!\nChemin va être remplacé par défault.")
                 self.urlVar.set(self.urlVar.get())
-
-    def newModel(self):
-        if self.is_model:
-            choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours d'utilisation, voulez-vous l'enregistrer ?")
-            temp = "Model "+getDate()
-            if choice is not None:
-                if choice:  # oui
-                    filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"]+os.sep+"Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-                    TraitementFichiers.saveModel(filename)
-                self.is_model = False  # on a créé un nouveau modèle
-                self.genParamsButton["state"] = tkinter.DISABLED
-                if self.paramsAvancesValue == 1:
-                    self.nbDimCachee["state"] = tkinter.NORMAL
-                    self.nbLayer["state"] = tkinter.NORMAL
-                    self.typeGenComboboite["state"] = tkinter.NORMAL
-
-    def saveModel(self):
-        temp = "Model "+getDate()
-        if not self.is_model:
-            tkinter.messagebox.showinfo("Attention", "Il n'y a pas de modèle en cours d'utilisation")
-        else:
-            filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"]+os.sep+"Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-            if filename != "":
-                TraitementFichiers.saveModel(filename)
-
-    def loadModel(self):
-        temp = "Model "+getDate()
-        choice = True
-        if self.is_model:
-            choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours, souhaitez-vous l'enregistrer ?")
-            if choice is not None:
-                if choice:
-                    filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"]+os.sep+"Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-                    if filename != "":
-                        TraitementFichiers.saveModel(filename)
-        # peut-être rajouter une variable is_saved pour savoir si le fichier a été sauvegardé ou pas
-        if choice is not None:  # l'utilisateur n'a pas choisi 'cancel'
-            loadSavePath = self.parametres["URL_Dossier"] + os.sep + "Modèles save"
-            if not os.path.exists(loadSavePath):
-                loadSavePath = self.parametres["URL_Dossier"]
-            filename = tkinter.filedialog.askopenfilename(initialdir=loadSavePath, filetypes=[('tar files', '.tar')]).replace("/", os.sep)
-
-            if filename != '':
-                user_parametres = self.getParametres()  # on récupère les paramètres entrés par l'utilisateur
-                model_params = TraitementFichiers.loadModel(filename, user_parametres)  # on récupère les paramètres du modèle chargé
-                self.varNbLayer.set(model_params["NombreLayer"])  # on set les valeurs de nbLayer et nbDimCachee avec les paramètres du modèle chargé
-                self.varDimCach.set(model_params["NombreDimensionCachee"])
-                self.typeGenComboboite.set(model_params["TypeGeneration"])
-                self.is_model = True
-                if self.paramsAvancesValue == 1:
-                    self.nbDimCachee["state"] = tkinter.DISABLED
-                    self.nbLayer["state"] = tkinter.DISABLED
-                    self.typeGenComboboite["state"] = tkinter.DISABLED
-                self.genParamsButton["state"] = tkinter.NORMAL
-
-
-
-
-
-def credits():
-    tkinter.messagebox.showinfo("Crédits", "Créé par:\nAntoine Escriva\nFlorian Bossard\nClément Guérin\nRaphaël Garnier\nClément Bruschini\n\nRepris par:\nYunfei Jia\nRaphaël Garnier")
-
-
-def about():
-    tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 2.0.0, 2021")
-
-
-def github():
-    webbrowser.open("https://github.com/Karatsuban/MusicBox", new=0)
 
 
 def muchFileWarning(path):
@@ -401,15 +288,4 @@ def centrefenetre(fen):
     fen.update_idletasks()
     l, h, x, y = geoliste(fen.geometry())
     fen.geometry("%dx%d%+d%+d" % (l, h, (fen.winfo_screenwidth() - l) // 2, (fen.winfo_screenheight() - h) // 2))
-
-
-def getDate():
-    date = datetime.datetime.now()
-    dateG = datetime.date(date.year, date.month, date.day)
-    dg = dateG.isoformat()
-    heureG = datetime.time(date.hour, date.minute, date.second)
-    hg = heureG.strftime('%H-%M-%S')
-    temp = "".join([dg, " ", hg])
-    return temp
-
 

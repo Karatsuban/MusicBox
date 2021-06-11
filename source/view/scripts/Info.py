@@ -40,9 +40,11 @@ class Info(tkinter.Frame):
         self.time_received = 0  # heure de reception du dernier message
         self.temps_restant = 0  # temps restant avant la fin du train
 
+        self.is_training = False
+
     def lanceTrain(self, parametres, is_model):
         # mettre traitementFichiers dans thread.
-
+        self.is_training = True
         self.avancement.set("../..")  # rafraîchissement de l'affichage
         self.restant.set("..s")
         self.time_received = 0
@@ -54,11 +56,13 @@ class Info(tkinter.Frame):
 
     def stopTrain(self):
         print("Arrêt train")
+        self.is_training = False
         self.finQueue.put("FIN")  # envoi du signal d'arrêt au modèle
 
     def updateEpoch(self):
         if not self.thread.is_alive() and self.queue.empty():
             self.after(0, self.master.switch_frame("Menu"))
+            self.is_training = False
             return
 
         while not self.queue.empty():
@@ -71,6 +75,5 @@ class Info(tkinter.Frame):
 
         temp = max(0.0, self.temps_restant - (time.time() - self.time_received))
         self.restant.set(str(int(temp))+"s")
-
         self.after(100, lambda: self.updateEpoch())
         return

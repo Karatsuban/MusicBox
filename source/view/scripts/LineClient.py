@@ -26,7 +26,8 @@ class LineClient:
                            "NombreEpoch": "200",
                            "NombreDimensionCachee": "128",
                            "NombreLayer": "1",
-                           "NombreSequenceBatch": "16"}
+                           "NombreSequenceBatch": "16",
+                           "ChoixAffichageDataInfo": 0}
         path = os.listdir(path=os.getcwd() + os.sep + "data")
 
         if "parametres.csv" in path:  # Si un fichier de configuration existe
@@ -44,7 +45,9 @@ class LineClient:
                                  "NombreEpoch": ["INT", 1, 1000000],
                                  "NombreDimensionCachee": ["INT", 16, 2048],
                                  "NombreLayer": ["INT", 1, 5],
-                                 "NombreSequenceBatch": ["INT", 1, 512]}
+                                 "NombreSequenceBatch": ["INT", 1, 512],
+                                 "ChoixAffichageDataInfo": ["INT", 0, 1]
+                                 }
 
     def menuPrincipal(self):
         fin = False
@@ -52,17 +55,19 @@ class LineClient:
             valide = False
             choice = ""
             while not valide:
-                print("-- Menu principal --")
+                print("\n------------------\n| Menu principal |\n------------------")
                 print("1 - Menu modele")
                 print("2 - Menu parametres")
                 print("3 - Entrainer")
                 print("4 - Generer morceaux")
                 print("5 - Credits")
                 print("6 - Quitter")
-                choice = input()
+                print("---------------------\n")
+                choice = input("Votre choix : ")
                 if choice in "123456" and len(choice) == 1 and choice != "":
                     valide = True
             choice = int(choice)
+            print("=================================== sep line ===================================")
             if choice == 1:
                 self.menuModel()
             elif choice == 2:
@@ -74,7 +79,7 @@ class LineClient:
             elif choice == 5:
                 credits()
             elif choice == 6:
-                fin = True
+                fin = self.askWhenClose()
         return
 
     def menuModel(self):
@@ -83,15 +88,17 @@ class LineClient:
             valide = False
             choice = ""
             while not valide:
-                print("-- Menu modele --")
+                print("\n---------------\n| Menu modele |\n---------------")
                 print("1 - Charger modele")
                 print("2 - Sauvegarder modele")
                 print("3 - Nouveau modele")
                 print("4 - Retour")
-                choice = input()
+                print("---------------------\n")
+                choice = input("Votre choix : ")
                 if choice in "1234" and len(choice) == 1 and choice != "":
                     valide = True
             choice = int(choice)
+            print("=================================== sep line ===================================")
             if choice == 1:
                 self.loadModel()
             elif choice == 2:
@@ -108,14 +115,16 @@ class LineClient:
             valide = False
             choice = ""
             while not valide:
-                print("-- Menu parametres --")
+                print("\n-------------------\n| Menu parametres |\n-------------------")
                 print("1 - Afficher parametres")
                 print("2 - Modifier parametres")
                 print("3 - Retour")
-                choice = input()
+                print("---------------------\n")
+                choice = input("Votre choix : ")
                 if choice in "123" and len(choice) == 1 and choice != "":
                     valide = True
             choice = int(choice)
+            print("=================================== sep line ===================================")
             if choice == 1:
                 self.displayParams()
             elif choice == 2:
@@ -125,12 +134,15 @@ class LineClient:
         return
 
     def modifyParams(self):
-        print("Dans modifyParams")
-        print("Pour chaque parametre, entrez une valeur ou Entree pour passer a la suivante")
+        print("\n-----------------------")
+        print("| Dans modifyParams |")
+        print("*****************************************************************************************************************")
+        print("| Pour chaque parametre, entrez une valeur ou appuyez ENTER (si vous ne modifiez pas) pour passer a la suivante |")
+        print("*****************************************************************************************************************")
         for ind, val in self.parametres.items():
             valide = False
             while not valide:
-                print(ind, val, end="  ")
+                print(ind, ":", val, end="  <--Avant/Après--> :  ")
                 value = input()
                 if value != "":
                     infos = self.parametres_infos[ind]  # on récupère les infos dans le dico associé
@@ -155,67 +167,88 @@ class LineClient:
                         self.parametres[ind] = value
                 else:
                     valide = True
+        print("=================================== sep line ===================================")
         return
 
     def displayParams(self):
         for ind, val in self.parametres.items():
             print(ind, " : ", val)
         print()
+        print("=================================== sep line ===================================")
         return
 
     def charging(self):
-        print("Dans charging")
+        print("\n-----------------")
+        print("| Dans charging |")
+        print("-----------------")
         queue_1 = queue.Queue()
         queue_fin = queue.Queue()
         TraitementFichiers.train(self.parametres, self.is_model, queue_1, queue_fin)
         self.is_model = True
+        print("=================================== sep line ===================================")
         return
 
     def newModel(self):
         temp = getDate()
         if self.is_model:
             choice = askyesnocancelSave()
-            if choice is not "CANCEL":
+            print("=================================== sep line ===================================")
+            if choice != "CANCEL":
                 if choice == "YES":
                     savePath = askSavePath()
-                    TraitementFichiers.saveModel(savePath)
+                    if " " not in savePath and savePath != "":
+                        TraitementFichiers.saveModel(savePath)
                 self.is_model = False
                 self.initParams()  # on re-initialise les parametres
         return
 
     def saveModel(self):
-        print("Dans saveModel")
+        print("\n------------------")
+        print("| Dans saveModel |")
+        print("------------------")
         temp = "Model " + getDate()
         if not self.is_model:
             print("Il n'y a pas de modele en cours d'utilisation !")
         else:
             savePath = askSavePath()
-            if savePath != "":
+            if " "not in savePath and savePath != "":
                 if ".tar" not in savePath:
                     savePath += ".tar"
                 TraitementFichiers.saveModel(savePath)
                 print("Modele enregistré")
+            else:
+                print("Save failed, Vous n'avez pas rentrz de chemin ou chemin est incorrect!")
+
+        print("=================================== sep line ===================================")
         return
 
     def loadModel(self):
         temp = "Model " + getDate()
-        print("Dans loadModel")
+        print("\n------------------")
+        print("| Dans loadModel |")
+        print("------------------")
         choice = ""
         if self.is_model:  # si un modèle est déjà en cours
             print("Nom conseille : ", temp)
             choice = askyesnocancelSave()  # on récupère ce que choisit l'utilisateur
             if choice == "YES":
                 savePath = askSavePath()
-                if ".tar" not in savePath:
-                    savePath += ".tar"
-                TraitementFichiers.saveModel(savePath)
+                if " " not in savePath and savePath != "":
+                    if ".tar" not in savePath:
+                        savePath += ".tar"
+                    TraitementFichiers.saveModel(savePath)
 
-        if choice is not "CANCEL":
-            loadPath = askLoadPath()
-            user_parametres = self.getParametres()
-            TraitementFichiers.loadModel(loadPath, user_parametres)
-            self.is_model = True
-            print("Chargement du modele effectue")
+        if choice != "CANCEL":
+            try:
+                loadPath = askLoadPath()
+                user_parametres = self.getParametres()
+                TraitementFichiers.loadModel(loadPath, user_parametres)
+                self.is_model = True
+                print("Chargement du modele effectue")
+            except IOError:
+                print("Save failed, Vous n'avez pas rentrz de chemin ou chemin est incorrect!")
+
+        print("=================================== sep line ===================================")
         return
 
     def Browser(self):
@@ -230,6 +263,7 @@ class LineClient:
                 print("Erreur : Il n'y a pas de fichiers MIDI dans le repertoire choisi !")
             else:
                 valide = True
+        print("=================================== sep line ===================================")
         return path
 
     def genererNewMorceau(self):
@@ -238,6 +272,7 @@ class LineClient:
             print("Les fichiers ont ete generes !")
         else:
             print("Aucun modele n'est en cours d'utilisation !")
+        print("=================================== sep line ===================================")
         return
 
     def exportParametres(self):
@@ -245,6 +280,26 @@ class LineClient:
 
     def getParametres(self):
         return self.parametres
+
+    def askWhenClose(self):
+        temp = "Model " + getDate()
+        if self.is_model:
+            choix = askyesnocancelSave()
+            if choix == "YES":
+                savePath = askSavePath()
+                if " "not in savePath and savePath != "":
+                    if ".tar" not in savePath:
+                        savePath += ".tar"
+                    TraitementFichiers.saveModel(savePath)
+                    print("Modele enregistré")
+                    return True
+            elif choix == "NO":
+                return True
+            else:
+                print("=================================== sep line ===================================")
+                return False
+        else:
+            return True
 
 
 # Verifier si fichiers .mid existe dans le dossier choisi.
@@ -265,14 +320,16 @@ def askyesnocancelSave():
     valide = False
     choice = ""
     while not valide:
-        print("Un modele est déjà en cours d'utilisation, voulez-vous le sauvegarder ? ")
+        print("\nUn modele est déjà en cours d'utilisation, voulez-vous le sauvegarder ? ")
         print("1 - Oui")
         print("2 - Non")
         print("3 - Annuler")
-        choice = input()
+        print("---------------------\n")
+        choice = input("Votre choix : ")
         if choice in "123" and len(choice) == 1 and choice != "":
             valide = True
         choice = int(choice)
+        print("=================================== sep line ===================================")
     if choice == 1:
         return "YES"
     elif choice == 2:
@@ -282,12 +339,14 @@ def askyesnocancelSave():
 
 
 def askSavePath():
-    choice = input("Entrez le chemin complet où sera sauvegarde le modele : ")
+    choice = input("\nEntrez le chemin complet où sera sauvegarde le modele : ")
+    print("=================================== sep line ===================================")
     return choice
 
 
 def askLoadPath():
-    choice = input("Entrez le chemin complet d'où sera charge le modele : ")
+    choice = input("\nEntrez le chemin complet d'où sera charge le modele : ")
+    print("=================================== sep line ===================================")
     return choice
 
 
@@ -302,12 +361,15 @@ def getDate():
 
 
 def credits():
-    print("Application créée par:\nAntoine Escriva\nFlorian Bossard\nClément Guérin\nRaphaël Garnier\nClément Bruschini\n\nRepris par:\nYunfei Jia\nRaphaël Garnier")
-    print("Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 1.5, 2021")
+    print("\nApplication créée par:\n---------------------\n- Antoine Escriva\n- Florian Bossard\n- Clément Guérin\n- Raphaël Garnier\n- Clément Bruschini\n\nRepris par:\n---------------------\n- Yunfei Jia\n- Raphaël Garnier")
+    print("Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\n---------------------\nVersion 1.5, 2021")
     print("https://github.com/Karatsuban/MusicBox\n")
+    print("=================================== sep line ===================================")
 
 
 def start():
     client = LineClient()
     print("Client lancé")
     client.menuPrincipal()
+
+
