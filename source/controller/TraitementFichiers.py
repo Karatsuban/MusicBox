@@ -48,9 +48,9 @@ def ecrire_fichier(nom, donnees):
 
 
 def get_rnn_parameters(parametres):
-    l = "TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,NombreSequenceBatch,TypeGeneration"
+    L = "TauxApprentissage,NombreEpoch,NombreDimensionCachee,NombreLayer,NombreSequenceBatch,TypeGeneration"
     p = []
-    for key in l.split(","):
+    for key in L.split(","):
         p.append(parametres[key])
     return p
 
@@ -187,7 +187,6 @@ def check_conversions(parametres):  # anciennement main
 
     # Bloc 5
     # on prépare les morceaux pour le RNN et afficher les info de data setting
-    liste_textes = []
     longTotale = 0
     counter = 0
     contentTotaleDico = {}
@@ -264,7 +263,7 @@ def train(parametres, is_model, queue, finQueue):
     liste_textes = get_input_liste(parametres)
     if not is_model:  # s'il n'y a pas de modèle en cours...
         rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # ...on crée un modèle avec les bons paramètres
-    rnn_object.train(int(parametres["NombreEpoch"]), queue, finQueue)  # on entraîne le modèle
+    rnn_object.train(int(parametres["NombreEpoch"]), int(parametres["NombreSequenceBatch"]), queue, finQueue)  # on entraîne le modèle
 
 
 def get_input_liste(parametres):
