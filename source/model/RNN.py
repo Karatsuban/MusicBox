@@ -174,9 +174,12 @@ class RNN:
                 self.shuffle = True  # il faudra mélanger à nouveau
         return L  # on renvoie les séquences
 
-    def train(self, nb_epochs, queue, finQueue):
+    def train(self, nb_epochs, batch_size, queue, finQueue):
         self.lstm.train()
         print("Début de l'Entraînement")
+
+        self.nb_epochs = nb_epochs
+        self.batch_size = batch_size
 
         list_loss = []
 
@@ -192,6 +195,7 @@ class RNN:
 
         while continu:
             batch_seq = self.pick_batch()  # on récupère les séquences de batch
+            print("len(batch_seq) = ", len(batch_seq))
             input_seq = []
             target_seq = []
             for a in range(len(batch_seq)):
@@ -225,18 +229,18 @@ class RNN:
             self.optimizer.step()
 
             if epoch % printInterval == 0:
-                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, nb_epochs, loss/printInterval, time.time() - previous))
+                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, loss/printInterval, time.time() - previous))
                 previous = time.time()
                 loss = 0
                 self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
 
-            queue.put(str(epoch) + ":" + str(nb_epochs) + ":" + str(time.time() - start))
+            queue.put(str(epoch) + ":" + str(self.nb_epochs) + ":" + str(time.time() - start))
             epoch += 1
 
             if not finQueue.empty():
                 info = finQueue.get()
 
-            if epoch == nb_epochs+1 or info == "FIN":
+            if epoch == self.nb_epochs+1 or info == "FIN":
                 continu = False
 
         print("Entraînement fini")
