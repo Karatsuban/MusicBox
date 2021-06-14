@@ -39,6 +39,7 @@ def importFromCSV():
             parametres['NombreDimensionCachee'] = row['NombreDimensionCachee']
             parametres['NombreLayer'] = row['NombreLayer']
             parametres['NombreSequenceBatch'] = row['NombreSequenceBatch']
+            parametres["ChoixAffichageDataInfo"] = row["ChoixAffichageDataInfo"]
     return parametres
 
 
