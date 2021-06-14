@@ -4,7 +4,6 @@ from source.controller import TraitementFichiers, ImportExportParametres
 import datetime
 import os
 import queue
-import glob
 
 
 class LineClient:
@@ -135,8 +134,6 @@ class LineClient:
         return
 
     def modifyParams(self):
-        print("\n-----------------------")
-        print("| Dans modifyParams |")
         print("*****************************************************************************************************************")
         print("| Pour chaque parametre, entrez une valeur ou appuyez ENTER (si vous ne modifiez pas) pour passer a la suivante |")
         print("*****************************************************************************************************************")
@@ -164,6 +161,15 @@ class LineClient:
                             valide = True
                         else:
                             print("Erreur : le parametre attendu doit etre un des suivants {}".format(infos[1]))
+                    elif infos[0] == "URL":
+
+                        if os.path.isdir(value):  # si le chemin existe bel et bien
+                            if verifMIDI(value):
+                                valide = True
+                            else:
+                                print("Erreur : Il n'y a pas de fichiers MIDI dans le repertoire choisi !")
+                        else:
+                            print("Erreur : le chemin n'existe pas")
                     if valide:
                         self.parametres[ind] = value
                 else:
@@ -179,9 +185,6 @@ class LineClient:
         return
 
     def charging(self):
-        print("\n-----------------")
-        print("| Dans charging |")
-        print("-----------------")
         queue_1 = queue.Queue()
         queue_fin = queue.Queue()
         TraitementFichiers.train(self.parametres, self.is_model, queue_1, queue_fin)
@@ -204,9 +207,6 @@ class LineClient:
 
     def saveModel(self):
         temp = "Model " + getDate()
-        print("\n------------------")
-        print("| Dans saveModel |")
-        print("------------------")
         print("Nom conseillé : ", temp)
         if not self.is_model:
             print("Il n'y a pas de modele en cours d'utilisation !")
@@ -218,15 +218,12 @@ class LineClient:
                 self.is_saved = True
                 print("Modele enregistré sous: ", savePath)
             else:
-                print("Vous avez déjà sauvegarder cette modèle. φ(゜▽゜*)♪ ")
+                print("Vous avez déjà sauvegardé ce modèle. φ(゜▽゜*)♪ ")
 
         print("=================================== sep line ===================================")
         return
 
     def loadModel(self):
-        print("\n------------------")
-        print("| Dans loadModel |")
-        print("------------------")
         choice = ""
         counter = 0
         tabFilename = []
@@ -252,25 +249,10 @@ class LineClient:
                 print("Chargement du modele effectue")
 
             except IOError:
-                print("Load failed, Vous n'avez pas rentrz de chemin ou chemin est incorrect!")
+                print("Load failed, Vous n'avez pas rentré de chemin ou chemin est incorrect!")
 
         print("=================================== sep line ===================================")
         return
-
-    def Browser(self):
-        valide = False
-        path = ""
-        while not valide:
-            path = input("Entrez le nouveau chemin : ")
-            if path == "":
-                print("Chemin non modifie")
-                path = self.parametres["URL_Dossier"]
-            if not self.verifMidi(path):
-                print("Erreur : Il n'y a pas de fichiers MIDI dans le repertoire choisi !")
-            else:
-                valide = True
-        print("=================================== sep line ===================================")
-        return path
 
     def genererNewMorceau(self):
         if self.is_model:
@@ -308,15 +290,10 @@ class LineClient:
 # Verifier si fichiers .mid existe dans le dossier choisi.
 def verifMIDI(path):
     files = os.listdir(path)
-    print(files)
     for k in range(len(files)):
         files[k] = os.path.splitext(files[k])[1]
-    print(files)
     extention = '.mid'
-    if extention in files:
-        return True
-    else:
-        return False
+    return extention in files
 
 
 def askyesnocancelSave():
@@ -341,18 +318,6 @@ def askyesnocancelSave():
         return "CANCEL"
 
 
-# def askSavePath():
-#     choice = input("\nEntrez le chemin complet où sera sauvegarde le modele : ")
-#     print("=================================== sep line ===================================")
-#     return choice
-#
-#
-# def askLoadPath():
-#     choice = input("\nEntrez le chemin complet d'où sera charge le modele : ")
-#     print("=================================== sep line ===================================")
-#     return choice
-
-
 def getDate():
     date = datetime.datetime.now()
     dateG = datetime.date(date.year, date.month, date.day)
@@ -374,5 +339,3 @@ def start():
     client = LineClient()
     print("Client lancé")
     client.menuPrincipal()
-
-
