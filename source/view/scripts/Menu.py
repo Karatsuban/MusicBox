@@ -150,7 +150,7 @@ class Menu(tkinter.Frame):
         # Création et placement du Bouton Lecteur
         self.textBoutonLecteur = tkinter.StringVar()
         self.textBoutonLecteur.set("Accès direct au lecteur")
-        self.Lecteur = tkinter.Button(self, textvariable=self.textBoutonLecteur, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [self.master.saveParametres(), master.switch_frame("Lecteur")])
+        self.Lecteur = tkinter.Button(self, textvariable=self.textBoutonLecteur, bg="white", font=self.PoliceTexte, bd=1, command=lambda: [master.switch_frame("Lecteur")])
         self.Lecteur.grid(row=16, column=0, sticky="EW")
 
         # Création et placement du Bouton Entraîner
@@ -170,13 +170,13 @@ class Menu(tkinter.Frame):
 
     def genereNewMorceau(self, master):
         if self.valide():
-            self.master.saveParametres()
+            self.parametres = self.master.getParametres()
             TraitementFichiers.genereNew(self.parametres)
             master.switch_frame("Lecteur")
         return
 
     def exportParametres(self):
-        self.master.saveParametres()
+        self.parametres = self.master.getParametres()
         ImportExportParametres.exportInCSV(self.parametres)
 
 
@@ -227,6 +227,7 @@ class Menu(tkinter.Frame):
                 self.genParamsButton["state"] = tkinter.NORMAL
 
             self.master.saveParametres()
+            self.parametres = self.master.getParametres()
             if self.paramsAvancesValue == 1:
                 self.nbDimCachee["state"] = tkinter.DISABLED
                 self.nbLayer["state"] = tkinter.DISABLED
@@ -242,7 +243,6 @@ class Menu(tkinter.Frame):
             self.urlVar.set(self.urlVar.get())
         else:
             if verifMIDI(filename):
-                self.urlVar.set(traitementAffichage(filename, 20))
                 self.urlVar.set(filename)
                 muchFileWarning(filename)
             else:
@@ -267,15 +267,6 @@ def verifMIDI(path):
         return True
     else:
         return False
-
-
-def traitementAffichage(chemin, taille):
-    if len(chemin) > taille:
-        cheminCoupe = chemin[-(len(chemin) - taille):]
-        return cheminCoupe
-    else:
-        return chemin
-
 
 def geoliste(g):
     # Récupère les infos relatives à l'écran

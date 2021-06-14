@@ -4,6 +4,7 @@ from source.controller import TraitementFichiers, ImportExportParametres
 import datetime
 import os
 import queue
+import glob
 
 
 class LineClient:
@@ -12,7 +13,7 @@ class LineClient:
         self.parametres = None
         self.parametres_infos = None
         self.is_model = False  # aucun modèle n'a été créé ou chargé
-
+        self.is_saved = False
         self.initParams()  # on initialise les parametres
 
     def initParams(self):
@@ -185,68 +186,73 @@ class LineClient:
         queue_fin = queue.Queue()
         TraitementFichiers.train(self.parametres, self.is_model, queue_1, queue_fin)
         self.is_model = True
+        self.is_saved = False
         print("=================================== sep line ===================================")
         return
 
     def newModel(self):
-        temp = getDate()
         if self.is_model:
-            choice = askyesnocancelSave()
-            print("=================================== sep line ===================================")
-            if choice != "CANCEL":
-                if choice == "YES":
-                    savePath = askSavePath()
-                    if " " not in savePath and savePath != "":
-                        TraitementFichiers.saveModel(savePath)
-                self.is_model = False
-                self.initParams()  # on re-initialise les parametres
+            if not self.is_saved:
+                choice = askyesnocancelSave()
+                print("=================================== sep line ===================================")
+                if choice != "CANCEL":
+                    if choice == "YES":
+                        self.saveModel()
+                    self.is_model = False
+                    self.initParams()  # on re-initialise les parametres
         return
 
     def saveModel(self):
+        temp = "Model " + getDate()
         print("\n------------------")
         print("| Dans saveModel |")
         print("------------------")
-        temp = "Model " + getDate()
+        print("Nom conseillé : ", temp)
         if not self.is_model:
             print("Il n'y a pas de modele en cours d'utilisation !")
         else:
-            savePath = askSavePath()
-            if " "not in savePath and savePath != "":
-                if ".tar" not in savePath:
-                    savePath += ".tar"
+            if not self.is_saved:
+                nomChoix = input("Veuillez indiquer le Nom que vous voulez: ")
+                savePath = self.parametres["URL_Dossier"] + os.sep + "Modèles save" + os.sep + nomChoix + ".tar"
                 TraitementFichiers.saveModel(savePath)
-                print("Modele enregistré")
+                self.is_saved = True
+                print("Modele enregistré sous: ", savePath)
             else:
-                print("Save failed, Vous n'avez pas rentrz de chemin ou chemin est incorrect!")
+                print("Vous avez déjà sauvegarder cette modèle. φ(゜▽゜*)♪ ")
 
         print("=================================== sep line ===================================")
         return
 
     def loadModel(self):
-        temp = "Model " + getDate()
         print("\n------------------")
         print("| Dans loadModel |")
         print("------------------")
         choice = ""
+        counter = 0
+        tabFilename = []
         if self.is_model:  # si un modèle est déjà en cours
-            print("Nom conseille : ", temp)
-            choice = askyesnocancelSave()  # on récupère ce que choisit l'utilisateur
-            if choice == "YES":
-                savePath = askSavePath()
-                if " " not in savePath and savePath != "":
-                    if ".tar" not in savePath:
-                        savePath += ".tar"
-                    TraitementFichiers.saveModel(savePath)
+            if not self.is_saved:
+                choice = askyesnocancelSave()  # on récupère ce que choisit l'utilisateur
+                if choice == "YES":
+                    self.saveModel()
 
-        if choice != "CANCEL":
+        if choice != "CANCEL" or choice == "":
             try:
-                loadPath = askLoadPath()
+                loadPath = self.parametres["URL_Dossier"] + os.sep + "Modèles save"
+                for tarFiles in [name for name in os.listdir(loadPath) if name.endswith('.tar')]:
+                    counter += 1
+                    tabFilename.append(tarFiles)
+                    print(counter, ":", tarFiles)
+
+                choix = int(input("\nRentrez votre choix: \n"))
                 user_parametres = self.getParametres()
-                TraitementFichiers.loadModel(loadPath, user_parametres)
+                loadFile = loadPath + os.sep + tabFilename[choix - 1]
+                TraitementFichiers.loadModel(loadFile, user_parametres)
                 self.is_model = True
                 print("Chargement du modele effectue")
+
             except IOError:
-                print("Save failed, Vous n'avez pas rentrz de chemin ou chemin est incorrect!")
+                print("Load failed, Vous n'avez pas rentrz de chemin ou chemin est incorrect!")
 
         print("=================================== sep line ===================================")
         return
@@ -282,22 +288,19 @@ class LineClient:
         return self.parametres
 
     def askWhenClose(self):
-        temp = "Model " + getDate()
         if self.is_model:
-            choix = askyesnocancelSave()
-            if choix == "YES":
-                savePath = askSavePath()
-                if " "not in savePath and savePath != "":
-                    if ".tar" not in savePath:
-                        savePath += ".tar"
-                    TraitementFichiers.saveModel(savePath)
-                    print("Modele enregistré")
+            if not self.is_saved:
+                choix = askyesnocancelSave()
+                if choix == "YES":
+                    self.saveModel()
                     return True
-            elif choix == "NO":
-                return True
+                elif choix == "NO":
+                    return True
+                else:
+                    print("=================================== sep line ===================================")
+                    return False
             else:
-                print("=================================== sep line ===================================")
-                return False
+                return True
         else:
             return True
 
@@ -338,16 +341,16 @@ def askyesnocancelSave():
         return "CANCEL"
 
 
-def askSavePath():
-    choice = input("\nEntrez le chemin complet où sera sauvegarde le modele : ")
-    print("=================================== sep line ===================================")
-    return choice
-
-
-def askLoadPath():
-    choice = input("\nEntrez le chemin complet d'où sera charge le modele : ")
-    print("=================================== sep line ===================================")
-    return choice
+# def askSavePath():
+#     choice = input("\nEntrez le chemin complet où sera sauvegarde le modele : ")
+#     print("=================================== sep line ===================================")
+#     return choice
+#
+#
+# def askLoadPath():
+#     choice = input("\nEntrez le chemin complet d'où sera charge le modele : ")
+#     print("=================================== sep line ===================================")
+#     return choice
 
 
 def getDate():

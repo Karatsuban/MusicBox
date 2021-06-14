@@ -30,6 +30,9 @@ class Application(tkinter.Tk):
 
         osName = platform.system()
 
+        # Si modele a deja ete enregistrer
+        self.is_saved = False
+
         if osName == "Windows":
             self.dicoTaille = {
                 "Lecteur": "390x295",
@@ -58,8 +61,8 @@ class Application(tkinter.Tk):
         self.menuFichier.add_command(label="Charger", command=self.loadModel)
 
         self.menuParam = tkinter.Menu(self.menuBarre, tearoff=0)
-        self.choisi = tkinter.IntVar()
-        self.menuParam.add_checkbutton(label="Affichage Data Info", variable=self.choisi)
+        self.choisiAffichageVar = tkinter.IntVar()
+        self.menuParam.add_checkbutton(label="Affichage Data Info", variable=self.choisiAffichageVar)
 
         self.menuPropos = tkinter.Menu(self.menuBarre, tearoff=0)
         self.menuPropos.add_command(label="À propos", command=about)
@@ -124,20 +127,22 @@ class Application(tkinter.Tk):
                 return
 
         if is_model:
-            Lecteur.pygame.mixer.music.stop()
-            choix = tkinter.messagebox.askyesnocancel("Attention","Un modèle est en cours d'utilisation, voulez-vous l'enregistrer ?")
-            if choix:
-                self.saveModel()
-            elif choix == None:
-                return
+            if not self.is_saved:
+                Lecteur.pygame.mixer.music.stop()
+                choix = tkinter.messagebox.askyesnocancel("Attention","Un modèle est en cours d'utilisation, \nvoulez-vous l'enregistrer ?")
+                if choix:
+                    self.saveModel()
+                elif choix == None:
+                    return
+
         self.destroy()
 
 
     # Cette méthode permet de changer la fame affichée dans la fenetre principale
     def switch_frame(self, frame):
+        self.saveParametres()
         self.frame.grid_remove()
         self.frame = self.dicoFrame[frame]
-        self.parametres = self.getParametres()
 
         taille = self.dicoTaille[frame]
         self.geometry(taille)
@@ -147,7 +152,9 @@ class Application(tkinter.Tk):
             self.frame.miseAJourRepertoire(self.parametres)
         if frame == "Info":
             is_model = self.dicoFrame["Menu"].is_model
+            self.is_saved = False
             self.frame.lanceTrain(self.parametres, is_model)
+
 
 
     def popupmsg(self, texte):
@@ -163,19 +170,20 @@ class Application(tkinter.Tk):
 
     def newModel(self):
         if self.dicoFrame["Menu"].is_model:
-            choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours d'utilisation, voulez-vous l'enregistrer ?")
-            if choice is not None:
-                if choice:  # oui
-                    temp = "Model " + getDate()
-                    filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"] + os.sep + "Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-                    TraitementFichiers.saveModel(filename)
-                self.dicoFrame["Menu"].is_model = False  # on a créé un nouveau modèle
-                self.dicoFrame["Menu"].genParamsButton["state"] = tkinter.DISABLED
+            if not self.is_saved:
+                choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours d'utilisation, voulez-vous l'enregistrer ?")
+                if choice is not None:
+                    if choice:  # oui
+                        self.saveModel()
+                else:
+                    return
+            self.dicoFrame["Menu"].is_model = False  # on a créé un nouveau modèle
+            self.dicoFrame["Menu"].genParamsButton["state"] = tkinter.DISABLED
 
-                if self.dicoFrame["Menu"].paramsAvancesValue == 1:
-                    self.dicoFrame["Menu"].nbDimCachee["state"] = tkinter.NORMAL
-                    self.dicoFrame["Menu"].nbLayer["state"] = tkinter.NORMAL
-                    self.dicoFrame["Menu"].typeGenComboboite["state"] = tkinter.NORMAL
+            if self.dicoFrame["Menu"].paramsAvancesValue == 1:
+                self.dicoFrame["Menu"].nbDimCachee["state"] = tkinter.NORMAL
+                self.dicoFrame["Menu"].nbLayer["state"] = tkinter.NORMAL
+                self.dicoFrame["Menu"].typeGenComboboite["state"] = tkinter.NORMAL
 
 
     def saveModel(self):
@@ -186,27 +194,28 @@ class Application(tkinter.Tk):
             filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"] + os.sep + "Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
             if filename != "":
                 TraitementFichiers.saveModel(filename)
+                self.is_saved = True
+
+
 
     def loadModel(self):
-        temp = "Model " + getDate()
         choice = True
         if self.dicoFrame["Menu"].is_model:
-            choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours, souhaitez-vous l'enregistrer ?")
-            if choice is not None:
-                if choice:
-                    filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"] + os.sep + "Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
-                    if filename != "":
-                        TraitementFichiers.saveModel(filename)
+            if not self.is_saved:
+                choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours, souhaitez-vous l'enregistrer ?")
+                if choice is not None:
+                    if choice:
+                        self.saveModel()
         # peut-être rajouter une variable is_saved pour savoir si le fichier a été sauvegardé ou pas
         if choice is not None:  # l'utilisateur n'a pas choisi 'cancel'
             loadSavePath = self.parametres["URL_Dossier"] + os.sep + "Modèles save"
-            if not os.path.exists(loadSavePath):loadSavePath = self.parametres["URL_Dossier"]
+            if not os.path.exists(loadSavePath):
+                loadSavePath = self.parametres["URL_Dossier"]
             filename = tkinter.filedialog.askopenfilename(initialdir=loadSavePath, filetypes=[('tar files', '.tar')]).replace("/", os.sep)
 
             if filename != '':
                 user_parametres = self.getParametres()  # on récupère les paramètres entrés par l'utilisateur
-                model_params = TraitementFichiers.loadModel(filename,
-                                                            user_parametres)  # on récupère les paramètres du modèle chargé
+                model_params = TraitementFichiers.loadModel(filename, user_parametres)  # on récupère les paramètres du modèle chargé
                 self.dicoFrame["Menu"].varNbLayer.set(model_params["NombreLayer"])  # on set les valeurs de nbLayer et nbDimCachee avec les paramètres du modèle chargé
                 self.dicoFrame["Menu"].varDimCach.set(model_params["NombreDimensionCachee"])
                 self.dicoFrame["Menu"].typeGenComboboite.set(model_params["TypeGeneration"])
@@ -229,10 +238,11 @@ class Application(tkinter.Tk):
                            "NombreDimensionCachee": self.dicoFrame["Menu"].nbDimCachee.get(),
                            "NombreLayer": self.dicoFrame["Menu"].nbLayer.get(),
                            "NombreSequenceBatch": self.dicoFrame["Menu"].nbSeqBatch.get(),
-                           "ChoixAffichageDataInfo": self.choisi.get()
+                           "ChoixAffichageDataInfo": self.choisiAffichageVar.get()
                            }
 
     def getParametres(self):
+        self.saveParametres()
         return self.parametres
 
 def credits():
