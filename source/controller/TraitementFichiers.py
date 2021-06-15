@@ -174,7 +174,7 @@ def check_conversions(parametres):  # anciennement main
             listeFichiersAConvertir.append(nom_csv)
 
     if listeFichiersAConvertir == [] and listeFichiersConvertis != []:
-        listeFichiersAConvertir.append(listeFichiersConvertis[0])
+        listeFichiersAConvertir.append(os.listdir(csv_path)[0])
         # totalement artificiel, pour avoir au moins 1 objet morceau pour plus tard
 
     # Bloc 4
@@ -196,7 +196,7 @@ def check_conversions(parametres):  # anciennement main
     for m in listeMorceaux:
         counter += 1
         if parametres["TypeGeneration"] == "Rythme seulement":
-            nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename
+            nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename.replace(".csv", "")
             content = m.preparer_track_rythme()  # on récupère toutes les pistes du morceau dans une liste
 
             if parametres["ChoixAffichageDataInfo"] == 1:  # si utilisateur a choisi d'afficher les Data info
@@ -215,7 +215,7 @@ def check_conversions(parametres):  # anciennement main
 
         if parametres["TypeGeneration"] == "Rythme et mélodie":
             resTab = []
-            nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename+".format"
+            nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename.replace("csv", "format")
             content = m.preparer_track_melodie()  # on récupère toutes les pistes du morceau
 
             if parametres["ChoixAffichageDataInfo"] == 1:
