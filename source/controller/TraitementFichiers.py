@@ -27,8 +27,8 @@ def loadModel(load_path, user_param):
     load_params = torch.load(load_path, map_location=torch.device('cpu'))  # on lit le fichier de sauvegarde
     check_conversions(user_param)  # on vérifie que toutes les conversions ont bien eu lieu
     param_list = get_rnn_parameters(user_param)
-    input_list = get_input_liste(user_param)
-    rnn_object = RNN.RNN(input_list, param_list, load_params)
+    input_list, ensemble_list = get_input_liste(user_param)
+    rnn_object = RNN.RNN(input_list, param_list, ensemble_list, load_params)
     return load_params
 
 
@@ -197,7 +197,7 @@ def check_conversions(parametres):  # anciennement main
         counter += 1
         if parametres["TypeGeneration"] == "Rythme seulement":
             nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename.replace(".csv", "")
-            content = m.preparer_track_rythme()  # on récupère toutes les pistes du morceau dans une liste
+            content, ensemble_elements = m.preparer_track_rythme()  # on récupère toutes les pistes du morceau dans une liste
 
             if parametres["ChoixAffichageDataInfo"] == 1:  # si utilisateur a choisi d'afficher les Data info
                 contentString = list2string(content)
@@ -211,12 +211,20 @@ def check_conversions(parametres):  # anciennement main
             for index in range(len(content)):
                 if content[index] != '':
                     savename = nom+"-"+str(index+1)+".format"
-                    ecrire_fichier(savename, content[index])  # on écrit chaque piste dans un fichier différent
+                    nb_elements = len(ensemble_elements)  # nombre d'éléments dans une note
+                    elements = "\n".join([str(ensemble_elements[k]) for k in range(nb_elements)])  # transformation en string des ensembles
+                    a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content[index]  # chaine à ecrire
+                    ecrire_fichier(savename, a_ecrire)  # on écrit chaque piste dans un fichier différent
 
         if parametres["TypeGeneration"] == "Rythme et mélodie":
             resTab = []
             nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename.replace("csv", "format")
-            content = m.preparer_track_melodie()  # on récupère toutes les pistes du morceau
+            content, ensemble_elements = m.preparer_track_melodie()  # on récupère toutes les pistes du morceau
+
+            nb_elements = len(ensemble_elements)  # nombre d'éléments
+            elements = "\n".join([str(ensemble_elements[k]) for k in range(nb_elements)])  # transformations
+            a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content
+            ecrire_fichier(nom, a_ecrire)  # on écrit tout dans un seul morceau
 
             if parametres["ChoixAffichageDataInfo"] == 1:
                 contentTab = content.rstrip(' ').split(' ')
@@ -238,7 +246,6 @@ def check_conversions(parametres):  # anciennement main
                     if data[2] not in toucheDico:
                         toucheDico[data[2]] = 1
 
-            ecrire_fichier(nom, [content])  # on écrit tout dans un seul morceau
     if parametres["ChoixAffichageDataInfo"] == 1:
         if parametres["TypeGeneration"] == "Rythme seulement":
             print("----------Rythme seulement------------")
@@ -259,15 +266,17 @@ def check_conversions(parametres):  # anciennement main
 def train(parametres, is_model, queue, finQueue):
     global rnn_object
     rnn_parametres = get_rnn_parameters(parametres)
-    check_conversions(parametres)  # on vérifie que toutes les conversions ont bien été faites
-    liste_textes = get_input_liste(parametres)
+
     if not is_model:  # s'il n'y a pas de modèle en cours...
-        rnn_object = RNN.RNN(liste_textes, rnn_parametres)  # ...on crée un modèle avec les bons paramètres
+        check_conversions(parametres)  # on vérifie que toutes les conversions ont bien été faites
+        liste_textes, liste_ensembles = get_input_liste(parametres)
+        rnn_object = RNN.RNN(liste_textes, rnn_parametres, liste_ensembles)  # ...on crée un modèle avec les bons paramètres
     rnn_object.train(int(parametres["NombreEpoch"]), int(parametres["NombreSequenceBatch"]), queue, finQueue)  # on entraîne le modèle
 
 
 def get_input_liste(parametres):
     liste_textes = []
+    liste_ensemble = None
     if parametres["TypeGeneration"] == "Rythme seulement":
         format_path = parametres["URL_Dossier"] + os.sep + "Conversion_rythme"
     elif parametres["TypeGeneration"] == "Rythme et mélodie":
@@ -275,8 +284,16 @@ def get_input_liste(parametres):
 
     for m in os.listdir(format_path):
         content = lire_fichier(format_path + os.sep + m)
-        liste_textes += content  # recuperation des donnees
-    return liste_textes
+        nb_elements = int(content[0])  # la première ligne du fichier donne le nombre d'éléments composant une note
+
+        if liste_ensemble is None:
+            liste_ensemble = [set() for _ in range(nb_elements)]
+
+        for a in range(nb_elements):
+            liste_ensemble[a] = liste_ensemble[a].union(eval(content[a+1]))  # on rajoute à l'ensemble
+
+        liste_textes += content[nb_elements + 1:]  # recuperation des donnees sur les notes
+    return liste_textes, liste_ensemble
 
 
 def genereMorceaux(parametres, listeMorceaux, rnn_object):
