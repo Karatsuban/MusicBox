@@ -7,12 +7,11 @@ import numpy as np
 import time
 from math import ceil, log
 import random
-# import matplotlib.pyplot as plt
 
 
 class RNN:
 
-    def __init__(self, input_list, param_list, load_param=None):
+    def __init__(self, input_list, param_list, ensemble_list, load_param=None):
         self.input_list = input_list                # liste des entree
         self.lr = float(param_list[0]) 		        # taux d'apprentissage du RNN
         self.nb_epochs = int(param_list[1])         # nombre de cycles d'entraînement
@@ -22,14 +21,19 @@ class RNN:
         self.batch_size = int(param_list[4])        # nombre de séquences dans un batch
         self.type_gen = param_list[5]               # type de génération choisi
 
-        # définition des dictionaires de notes vers index et invers
-        self.dict_int2val = None           # liste des dictionnaires de traduction de int vers val
-        self.dict_val2int = None           # liste des dictionnaires de traduction de val vers int
-        self.dict_size = None              # liste des taille des dictionnaires
+        # définition des dictionaires de notes vers index et inversement
+        self.list_dict_int2val = [dict(enumerate(k)) for k in ensemble_list]  # liste des dictionnaires de traduction de int vers val
+        self.list_dict_val2int = [{val: ind for ind, val in k.items()} for k in self.list_dict_int2val]  # liste des dictionnaires de traduction de val vers int
+        self.list_dict_size = [len(k) for k in self.list_dict_val2int]  # liste des taille des dictionnaires
+        self.sum_dict_size = sum(self.list_dict_size)  # somme des longueurs de chaque dictionnaire
+        # RAJOUTER UN DICO pour BOS, NOTE et EOS
 
-        # définition des paramètres d'embeddinh
-        self.embed_size = None  # taille du vecteur d'embedding
-        self.embed = None  # fonction d'embedding
+        # définition des paramètres d'embedding
+        self.list_embed_size = []  # liste des tailles des vecteurs d'embedding
+        self.list_embed = []  # liste des fonctions d'embedding
+        self.sum_embed_size = None  # somme des tailles des vecteurs d'embedding
+
+        self.nb_elements = len(ensemble_list)  # nombre d'éléments dans une notre représentée par un N-uplet
 
         # définition du RNN, de la fonction d'évaluation de l'erreur, de la couche linéaire et de l'optimiseur
         self.lstm = None
@@ -49,6 +53,7 @@ class RNN:
 
         # correction du nombre de morceaux par batch
         self.batch_size = 2 ** ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min entre batch_size et le nombre de sequences d'entrée
+        # à mettre plus bas (dans le train !)
 
         self.device = device_choice()  # choix de l'appareil (CPU/GPU)
 
@@ -62,16 +67,17 @@ class RNN:
         parametres = {
             "NombreDimensionCachee": self.hidden_dim,
             "NombreLayer": self.nb_layers,
-            "dict_int2val": self.dict_int2val,
-            "dict_val2int": self.dict_val2int,
-            "dict_size": self.dict_size,
-            "embed_size": self.embed_size,
-            "embed": self.embed,
+            "dict_int2val": self.list_dict_int2val,
+            "dict_val2int": self.list_dict_val2int,
+            "dict_size": self.list_dict_size,
+            "embed_size": self.list_embed_size,
+            "embed": self.list_embed,
             "lstm_state_dict": self.lstm.state_dict(),
             "cls": self.cls,
             "loss_function": self.loss_function,
             "optimizer_state_dict": self.optimizer.state_dict(),
             "TypeGeneration": self.type_gen,
+            "sum_embed_size": self.sum_embed_size
         }
         return parametres
 
@@ -80,34 +86,89 @@ class RNN:
         self.type_gen = param["TypeGeneration"]
         self.hidden_dim = param["NombreDimensionCachee"]
         self.nb_layers = param["NombreLayer"]
-        self.dict_int2val = param["dict_int2val"]
-        self.dict_val2int = param["dict_val2int"]
-        self.dict_size = param["dict_size"]
-        self.embed_size = param["embed_size"]
-        self.embed = param["embed"]
-        self.embed.to(self.device)
+        self.list_dict_int2val = param["dict_int2val"]
+        self.list_dict_val2int = param["dict_val2int"]
+        self.list_dict_size = param["dict_size"]
+        self.list_embed_size = param["embed_size"]
+        self.list_embed = param["embed"]
+        for a in range(len(self.list_embed)):
+            self.list_embed[a].to(self.device)
+        self.sum_embed_size = param["sum_embed_size"]
         self.cls = param["cls"]
         self.cls.to(self.device)
         self.loss_function = param["loss_function"]
 
-        self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers).to(self.device)
+        self.lstm = nn.LSTM(input_size=self.sum_embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers).to(self.device)
         self.lstm.load_state_dict(param["lstm_state_dict"])
 
         self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
         self.optimizer.load_state_dict(param["optimizer_state_dict"])
 
+    def prepare(self):
+
+        # on crée notre embedding
+
+        for a in range(self.nb_elements):  # on crée tous les embeddings
+            self.list_embed_size.append(25)  # une taille de 25 pour commencer ?
+            self.list_embed.append(nn.Embedding(self.list_dict_size[a], self.list_embed_size[a]))
+            self.list_embed[a] = self.list_embed[a].to(self.device)  # on passe tous les embeddings sur le device
+
+        self.sum_embed_size = sum(self.list_embed_size)  # on calcule la somme des longueurs des embeddings
+
+        # on crée le modèle avec les hyperparamètres
+        self.lstm = nn.LSTM(input_size=self.sum_embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers)
+        self.lstm = self.lstm.to(self.device)  # on déplace le modèle vers le device utilisé
+
+        # définition de la fonction d'erreur de la couche linéaire et de l'optimiseur
+        self.loss_function = nn.CrossEntropyLoss().to(self.device)
+        self.cls = nn.Linear(self.hidden_dim, self.sum_dict_size).to(self.device)
+        self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
+
+    def distribution_pick(self, vecteur):
+        # prend un vecteur de probabilités et renvoie un indice après un tirage
+        l_idx = [0]
+        for a in self.list_dict_size:
+            l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
+
+        list_test = [True] * self.nb_elements
+        indices = []
+        while list_test.count(True) != 0:
+            indices = []
+            for idx in range(self.nb_elements):
+                vec = vecteur[0][l_idx[idx]:l_idx[idx+1]]
+                prob = nn.functional.softmax(vec, dim=0).data
+                idx = torch.multinomial(prob, 1).item()
+                indices.append(idx)
+            list_test = [a == self.list_dict_val2int[k]["&"] for k, a in enumerate(indices)]
+            if list_test.count(True) >= 4:
+                break
+        return indices  # on renvoie la liste des indices
+
     # This function takes in the model and character as arguments and returns the next character prediction and hidden state
-    def predict(self, index, para):
-        char = torch.tensor([[index]]).to(self.device)
-        model_input = self.embed(char).to(self.device)
+    def predict(self, indexes, para):
+        model_input = torch.zeros((1, 1, self.sum_embed_size)).to(self.device)
+        # print("model_input.size() = ", model_input.size())
+        char = torch.tensor(indexes).to(self.device)
+
+        list_embeddings = [self.list_embed[idx](a) for idx, a in enumerate(char)]  # embedding des éléments de input_index
+        if self.nb_elements != 1:
+            embedding = torch.cat(tuple(list_embeddings))  # concaténation des vecteurs d'embedding
+        else:
+            embedding = list_embeddings[0]
+
+        model_input[0][0] = embedding
 
         out, (hidden, cell) = self.lstm(model_input, para)
         out = self.cls(out).to(self.device)
-        prob = nn.functional.softmax(out[-1], dim=1).data
+        prob = out[0]
+        # prob = nn.functional.softmax(out[0], dim=1).data
 
-        char_ind = self.dict_size - 2
-        while char_ind == self.dict_size - 2:
-            char_ind = distribution_pick(prob)
+        char_ind = [self.list_dict_val2int[k]["@"] for k in range(self.nb_elements)]  # indices du BOS
+        fin = False
+        while not fin:  # tant qu'on trouve un BOS, on recommence
+            char_ind = self.distribution_pick(prob)
+            test_list = [char_ind[k] != self.list_dict_val2int[k]["@"] for k in range(self.nb_elements)]
+            fin = False not in test_list
 
         return char_ind, (hidden, cell)
 
@@ -116,45 +177,23 @@ class RNN:
         self.lstm.eval()  # eval mode
         # First off, run through the starting characters
         chars = []
-        model_input = self.dict_size - 2  # indice du BOS
-        hidden = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
-        cell = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
-        # Now pass in the previous characters and get a new one
-        for ii in range(max_len):
-            modele_output, (hidden, cell) = self.predict(model_input, (hidden, cell))
-            if modele_output == self.dict_size - 1:
-                break  # si c'est EOS, on a fini le morceau
-            else:
-                chars.append(self.dict_int2val[modele_output])
-            model_input = modele_output
+        while not chars:  # tant que chars est vide (pour éviter de renvoyer un morceau généré vide)
+            model_input = [self.list_dict_val2int[k]["@"] for k in range(self.nb_elements)]  # indices des BOS
+
+            hidden = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
+            cell = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
+            # Now pass in the previous characters and get a new one
+            for ii in range(max_len):
+                modele_output, (hidden, cell) = self.predict(model_input, (hidden, cell))
+                list_test = [modele_output[k] == self.list_dict_val2int[k]["&"] for k in range(self.nb_elements)]  # on vérifie l'égalité de chaque indice avec l'indice de EOS
+                if True in list_test:
+                    break  # au moins un EOS a été généré, on arrête le morceau
+                else:
+                    note = ":".join([self.list_dict_int2val[k][modele_output[k]] for k in range(self.nb_elements)])
+                    chars.append(note)
+                model_input = modele_output
 
         return ' '.join(chars)
-
-    def prepare(self):
-
-        # on parcourt tous les n-uplets un par un et on crée les dictionnaires associés à chaque valeur du n-uplet
-        chars = set()  # notre ensemble
-        for a in self.input_list:  # on parcourt chaque input
-            chars = chars.union(set(a))  # on ajoute les notes trouvées à notre ensemble
-
-        self.dict_int2val = dict(enumerate(chars))                           # on crée un dictionnaire pour maper les entiers aux caractères
-        self.dict_val2int = {val: ind for ind, val in self.dict_int2val.items()} 	  # on crée un autre dictionnaire qui map les caractères aux entiers
-
-        self.dict_size = len(self.dict_int2val) + 2            # on stocke la longueurs du dico (+2 pour BOS et EOS)
-
-        # on crée notre embedding
-        self.embed_size = 100  # 2 * ceil(log(self.dict_size, 2))
-        self.embed = nn.Embedding(self.dict_size, self.embed_size)
-        self.embed = self.embed.to(self.device)
-
-        # on crée le modèle avec les hyperparamètres
-        self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=self.hidden_dim, num_layers=self.nb_layers)
-        self.lstm = self.lstm.to(self.device)  # on déplace le modèle vers le device utilisé
-
-        # définition de la fonction d'erreur de la couche linéaire et de l'optimiseur
-        self.loss_function = nn.CrossEntropyLoss().to(self.device)
-        self.cls = nn.Linear(self.hidden_dim, self.dict_size).to(self.device)
-        self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
 
     def pick_batch(self):
         L = []
@@ -195,21 +234,26 @@ class RNN:
 
         while continu:
             batch_seq = self.pick_batch()  # on récupère les séquences de batch
-            print("len(batch_seq) = ", len(batch_seq))
-            input_seq = []
             target_seq = []
-            for a in range(len(batch_seq)):
-                notes = [self.dict_val2int[k] for k in batch_seq[a]]
-                input_seq.append([self.dict_size - 2] + notes)  # on rajoute le BOS au début
-                target_seq.append(notes + [self.dict_size - 1])  # on rajoute le EOS à la fin
 
-            lengths = [len(s)+1 for s in batch_seq]
-            index_tensor = torch.zeros((len(batch_seq), max(lengths)), dtype=torch.long).to(self.device)
+            lengths = [len(s)-1 for s in batch_seq]
+            input_tensor = torch.zeros((len(batch_seq), max(lengths), self.sum_embed_size), dtype=torch.float).to(self.device)
 
-            for idx, (seq, seqlen) in enumerate(zip(input_seq, lengths)):
-                index_tensor[idx, :seqlen] = torch.tensor(seq)
+            for idx, seq in enumerate(batch_seq):  # seq est une séquence complète
+                list_notes_decomp = []
+                for pos, note in enumerate(seq):  # note est une note de la séquence
+                    decomp = [self.list_dict_val2int[idx][a] for idx, a in enumerate(note.split(":"))]  # decomposition de la note selon chacun de ses éléments
+                    if pos != len(seq) - 1:  # on ne prend pas en compte la dernière note de la séquence dans l'input
+                        decomp_emb = [self.list_embed[idx](torch.tensor(a).to(self.device)) for idx, a in enumerate(decomp)]  # embedding des éléments de decomp
+                        decomp_emb_tensor = torch.cat(tuple(decomp_emb))  # concaténation des vecteurs d'embedding
+                        input_tensor[idx, :lengths[idx]] = decomp_emb_tensor  # ajout du tenseur d'embedding dans le tenseur d'input
+                    if pos != 0:  # on ne prend pas en compte la première note de la séquence dans le target
+                        list_notes_decomp.append(decomp)
+                target_seq += list_notes_decomp
 
-            input_tensor = self.embed(index_tensor).to(self.device)
+            target_seq = [list(a) for a in zip(*target_seq)]  # création d'une liste de "nb_elements" elements contenant chacun tous les index de leur élément de chaque note associé
+            tensor_target = torch.tensor(target_seq).to(self.device)
+
             packed_input = nn.utils.rnn.pack_padded_sequence(input_tensor, lengths, batch_first=True, enforce_sorted=False).to(self.device)
             h0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)
             c0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)
@@ -217,10 +261,23 @@ class RNN:
             out, input_sizes = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
 
             out = torch.cat([out[i, :l] for i, l in enumerate(lengths)])
-            tensor_target = torch.cat(tuple([torch.tensor(a) for a in target_seq])).to(self.device)
-
             out = self.cls(out)
-            err = self.loss_function(out, tensor_target).to(self.device)
+
+            l_idx = [0]
+            for a in self.list_dict_size:
+                l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
+
+            out_cut = []
+            for idx in range(self.nb_elements):
+                indexes = torch.tensor([k for k in range(l_idx[idx], l_idx[idx+1])]).to(self.device)
+                out_cut.append(torch.index_select(out, 1, indexes))  # on récupère la bonne partie du tenseur qu'on ajoute à la liste
+
+            l_err = [self.loss_function(out_cut[k], tensor_target[k]).to(self.device) for k in range(self.nb_elements)]   # calcul de la loss pour chaque élément d'une note
+            if len(l_err) > 1:
+                err = torch.log(sum(l_err))
+            else:
+                err = l_err[0]
+
             list_loss.append(err.item())
             loss += err.item()
 
@@ -262,12 +319,6 @@ class RNN:
         # coupe self.input_list en une liste d'entraînement et une liste de test
         nb_training_files = training_file_number_choice(len(self.input_list))  # on récupère le nombre de fichiers d'entraînement
         self.training_files, self.test_files = training_file_choice(self.input_list, nb_training_files)  # on récupère les fichiers de test et d'entraînement
-
-
-def distribution_pick(vecteur):
-    # prend un vecteur de probabilités et renvoie un indice après un tirage
-    vecteur = vecteur.detach().to('cpu')[0]
-    return torch.multinomial(vecteur, 1)[0].item()  # on renvoie un seul indice
 
 
 def training_file_number_choice(total):
