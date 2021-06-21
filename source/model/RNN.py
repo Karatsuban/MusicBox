@@ -236,13 +236,23 @@ class RNN:
         epoch = 1
         info = ""
         printInterval = 1
-
+        lrInterval = 20
+        
+        l_idx = [0]
+        for a in self.list_dict_size:
+            l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
+            
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.9)
+               
         while continu:
             batch_seq = self.pick_batch()  # on récupère les séquences de batch
             target_seq = []
 
             lengths = [len(s)-1 for s in batch_seq]
             input_tensor = torch.zeros((len(batch_seq), max(lengths), self.sum_embed_size), dtype=torch.float).to(self.device)
+            target2_tensor = torch.zeros((sum(lengths), self.sum_dict_size), dtype=torch.float).to(self.device)
+
+            num_note = 0
 
             for idx, seq in enumerate(batch_seq):  # seq est une séquence complète
                 list_notes_decomp = []
@@ -254,6 +264,11 @@ class RNN:
                         input_tensor[idx, :lengths[idx]] = decomp_emb_tensor  # ajout du tenseur d'embedding dans le tenseur d'input
                     if pos != 0:  # on ne prend pas en compte la première note de la séquence dans le target
                         list_notes_decomp.append(decomp)
+                        
+                        for i, k in enumerate(decomp):
+                            target2_tensor[num_note, l_idx[i]+k] = 1
+                        num_note += 1
+                                           
                 target_seq += list_notes_decomp
 
             target_seq = [list(a) for a in zip(*target_seq)]  # création d'une liste de "nb_elements" elements contenant chacun tous les index de leur élément de chaque note associé
@@ -268,14 +283,14 @@ class RNN:
             out = torch.cat([out[i, :l] for i, l in enumerate(lengths)])
             out = self.cls(out)
 
-            l_idx = [0]
-            for a in self.list_dict_size:
-                l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
-
             out_cut = []
             for idx in range(self.nb_elements):
                 indexes = torch.tensor([k for k in range(l_idx[idx], l_idx[idx+1])]).to(self.device)
-                out_cut.append(torch.index_select(out, 1, indexes))  # on récupère la bonne partie du tenseur qu'on ajoute à la liste
+                elem_tensor = nn.functional.softmax(torch.index_select(out, 1, indexes), dim=1) # on récupère la bonne partie du tenseur qu'on ajoute à la liste
+                out_cut.append(elem_tensor)
+                out.index_copy_(1, indexes, elem_tensor)
+            acc = 100 * (1 - (out - target2_tensor).pow(2).sum()/(4*sum(lengths))).float()
+
 
             l_err = [self.loss_function(out_cut[k], tensor_target[k]).to(self.device) for k in range(self.nb_elements)]   # calcul de la loss pour chaque élément d'une note
             if len(l_err) > 1:
@@ -291,10 +306,13 @@ class RNN:
             self.optimizer.step()
 
             if epoch % printInterval == 0:
-                print("{}/{} \t Loss = {} \ttime taken = {}".format(epoch, self.nb_epochs, loss/printInterval, time.time() - previous))
+                print("{}/{} \t Loss = {} \tPerplexity = {} \tAccuracy = {}% \ttime taken = {}".format(epoch, self.nb_epochs, "%.5f" % (loss/printInterval), "%.5f" % np.exp(loss/printInterval), "%.3f" % acc, "%.3f" % (time.time() - previous)))
                 previous = time.time()
                 loss = 0
-                self.lr -= (1 / 100) * self.lr  # mise à jour du learning rate
+                
+            scheduler.step()
+            if epoch % lrInterval == 0:
+                print(self.optimizer.state_dict()['param_groups'][0]['lr'])
 
             queue.put(str(epoch) + ":" + str(self.nb_epochs) + ":" + str(time.time() - start))
             epoch += 1
