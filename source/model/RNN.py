@@ -21,12 +21,13 @@ class RNN:
         self.batch_size = int(param_list[4])        # nombre de séquences dans un batch
         self.type_gen = param_list[5]               # type de génération choisi
 
+        self.total_epoch = 0                        # nombre total d'epoch depuis la création du modèle
+
         # définition des dictionaires de notes vers index et inversement
         self.list_dict_int2val = [dict(enumerate(k)) for k in ensemble_list]  # liste des dictionnaires de traduction de int vers val
         self.list_dict_val2int = [{val: ind for ind, val in k.items()} for k in self.list_dict_int2val]  # liste des dictionnaires de traduction de val vers int
         self.list_dict_size = [len(k) for k in self.list_dict_val2int]  # liste des taille des dictionnaires
         self.sum_dict_size = sum(self.list_dict_size)  # somme des longueurs de chaque dictionnaire
-        # RAJOUTER UN DICO pour BOS, NOTE et EOS
 
         # définition des paramètres d'embedding
         self.list_embed_size = []  # liste des tailles des vecteurs d'embedding
@@ -53,7 +54,7 @@ class RNN:
 
         # correction du nombre de morceaux par batch
         self.batch_size = 2 ** ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min entre batch_size et le nombre de sequences d'entrée
-        # à mettre plus bas (dans le train !)
+        # à mettre plus bas (dans le train ?)
 
         self.device = device_choice()  # choix de l'appareil (CPU/GPU)
 
@@ -77,12 +78,16 @@ class RNN:
             "loss_function": self.loss_function,
             "optimizer_state_dict": self.optimizer.state_dict(),
             "TypeGeneration": self.type_gen,
-            "sum_embed_size": self.sum_embed_size
+            "sum_embed_size": self.sum_embed_size,
+            "TotalEpoch": self.total_epoch,
         }
         return parametres
 
     def setParametres(self, param):
-        # vérifier si on a besoin de passer les objets sur un device
+        try:
+            self.total_epoch = param["TotalEpoch"]
+        except KeyError:
+            self.total_epoch = 0
         self.type_gen = param["TypeGeneration"]
         self.hidden_dim = param["NombreDimensionCachee"]
         self.nb_layers = param["NombreLayer"]
@@ -299,6 +304,8 @@ class RNN:
 
             if epoch == self.nb_epochs+1 or info == "FIN":
                 continu = False
+
+        self.total_epoch += epoch - 1  # mise à jour du total d'epoch
 
         print("Entraînement fini")
         print("Temps total : ", time.time()-start)
