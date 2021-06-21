@@ -206,13 +206,13 @@ class Morceau:
 
     # **********************************************************************************
 
-    def preparer_track_rythme_select(self, numero):
+     def preparer_track_rythme_select(self, numero):
         # encode la piste numero sous le format adapté au rythme et renvoie le résultat
         L = self.get_track(numero)  # on récupère la piste
-        chaine_retour = ""
+        chaine_retour = "@" + " "
         time2 = 0
         # longueur_mesure = self.tsNum * self.tempsNoteRef  # temps d'une mesure
-        ensemble_element = set()  # ensemble des possibilités pour le 1er élément de la note
+        ensemble_element = {"@", "&"}  # ensemble des possibilités pour le 1er élément de la note
         while L:
             line1 = L[0].split(",")  # transformation en liste
             time1 = int(line1[1])  # récupérer le Time
@@ -229,10 +229,12 @@ class Morceau:
 
             type_note = self.time_to_note_dict[duree]
 
+
             chaine_retour += str(type_note) + " "
             ensemble_element.add(type_note)  # on rajoute cette possibilité dans l'ensemble
 
             L = L[2:]  # on enleve les deux premières lignes
+        chaine_retour += "&"
         return chaine_retour, [ensemble_element]
 
     def preparer_track_rythme(self, numero=None):
