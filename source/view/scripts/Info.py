@@ -1,4 +1,6 @@
 # coding:utf-8
+
+import math
 import time
 import tkinter
 import tkinter.font as tkFont
@@ -74,6 +76,16 @@ class Info(tkinter.Frame):
             self.avancement.set(epoch)
 
         temp = max(0.0, self.temps_restant - (time.time() - self.time_received))
-        self.restant.set(str(int(temp))+"s")
+        self.restant.set(timeConversion(temp))
         self.after(100, lambda: self.updateEpoch())
         return
+
+
+def timeConversion(N):
+    n = time.gmtime(N)
+    if N < 60:
+        return time.strftime("%Ss", n)
+    elif N < 3600:
+        return time.strftime("%Mm %Ss", n)
+    else:
+        return time.strftime("%Hh %Mm %Ss", n)
