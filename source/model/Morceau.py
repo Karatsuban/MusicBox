@@ -206,7 +206,7 @@ class Morceau:
 
     # **********************************************************************************
 
-     def preparer_track_rythme_select(self, numero):
+    def preparer_track_rythme_select(self, numero):
         # encode la piste numero sous le format adapté au rythme et renvoie le résultat
         L = self.get_track(numero)  # on récupère la piste
         chaine_retour = "@" + " "
