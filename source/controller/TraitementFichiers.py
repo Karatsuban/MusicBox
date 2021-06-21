@@ -32,6 +32,10 @@ def loadModel(load_path, user_param):
     return load_params
 
 
+def getModelParametres():
+    return rnn_object.getParametres()
+
+
 def lire_fichier(nom):
     file = open(nom, 'r')
     lines = file.readlines()
@@ -58,7 +62,6 @@ def get_rnn_parameters(parametres):
 def conversion_en_csv(writeAddr, readAddr, name_in):
     filename = name_in.replace(".mid", ".csv")
 
-    # convertit un fichier .mid en fichier .csv
     csv_list = pm.midi_to_csv(readAddr + os.sep + name_in)  # transformation de midi en csv
     name_out = writeAddr + os.sep + filename
 
@@ -147,7 +150,7 @@ def check_conversions(parametres):  # anciennement main
     csv_path = parametres["URL_Dossier"] + os.sep + "CSV"
 
     # Bloc 2
-    # on vérifier si .csv existe déjà (si non, on les crée).
+    # on vérifi si .csv existe déjà (si non, on les crée).
     for midi_files in listeFichiers:
         nom = midi_files.replace(".mid", ".csv")
         if nom not in os.listdir(csv_path):
@@ -168,9 +171,10 @@ def check_conversions(parametres):  # anciennement main
 
     listeFichiersAConvertir = []
     # on vérifie si les .format existe.
-    for nom_csv in os.listdir(csv_path):
-        nom = nom_csv.replace(".csv", ".format")  # en admettant que notre extension sera ".format"
-        if nom not in listeFichiersConvertis:
+    for nom_mid in listeFichiers:
+        nom_format = nom_mid.replace(".mid", ".format")  # en admettant que notre extension sera ".format"
+        nom_csv = nom_mid.replace(".mid", ".csv")
+        if nom_format not in listeFichiersConvertis:
             listeFichiersAConvertir.append(nom_csv)
 
     if listeFichiersAConvertir == [] and listeFichiersConvertis != []:
