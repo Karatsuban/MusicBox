@@ -108,7 +108,6 @@ class Application(tkinter.Tk):
             "Info": Info.Info(self),
         }
 
-
         # frame de base
         self.frame = self.dicoFrame["Lecteur"]
 
@@ -129,16 +128,15 @@ class Application(tkinter.Tk):
         if is_model:
             if not self.is_saved:
                 Lecteur.pygame.mixer.music.stop()
-                choix = tkinter.messagebox.askyesnocancel("Attention","Un modèle est en cours d'utilisation, \nvoulez-vous l'enregistrer ?")
+                choix = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est en cours d'utilisation, \nvoulez-vous l'enregistrer ?")
                 if choix:
                     self.saveModel()
-                elif choix == None:
+                elif choix is None:
                     return
 
         self.destroy()
 
-
-    # Cette méthode permet de changer la fame affichée dans la fenetre principale
+    # Cette méthode permet de changer la frame affichée dans la fenetre principale
     def switch_frame(self, frame):
         self.saveParametres()
         self.frame.grid_remove()
@@ -155,20 +153,10 @@ class Application(tkinter.Tk):
             self.is_saved = False
             self.frame.lanceTrain(self.parametres, is_model)
 
-
-
-    def popupmsg(self, texte):
-        popup = tkinter.Tk()
-        centrefenetre(popup)
-        popup.title("Erreur")
-        popup.config(bg="white")
-        label = tkinter.Label(popup, text=texte, bg="white")
-        popup.geometry("315x120")
-        label.pack(side="top", fill="x", pady=10)
-        ok = tkinter.Button(popup, text="Ok", bg="white", command=popup.destroy, width=10)
-        ok.pack()
-
     def newModel(self):
+        if self.dicoFrame["Info"].is_training:  # en cours d'entraînement
+            return
+
         if self.dicoFrame["Menu"].is_model:
             if not self.is_saved:
                 choice = tkinter.messagebox.askyesnocancel("Attention", "Un modèle est déjà en cours d'utilisation, voulez-vous l'enregistrer ?")
@@ -179,26 +167,36 @@ class Application(tkinter.Tk):
                     return
             self.dicoFrame["Menu"].is_model = False  # on a créé un nouveau modèle
             self.dicoFrame["Menu"].genParamsButton["state"] = tkinter.DISABLED
+            self.dicoFrame["Menu"].typeGenComboboite["state"] = tkinter.NORMAL
+            self.dicoFrame["Menu"].openFolderButton["state"] = tkinter.NORMAL
 
             if self.dicoFrame["Menu"].paramsAvancesValue == 1:
                 self.dicoFrame["Menu"].nbDimCachee["state"] = tkinter.NORMAL
                 self.dicoFrame["Menu"].nbLayer["state"] = tkinter.NORMAL
-                self.dicoFrame["Menu"].typeGenComboboite["state"] = tkinter.NORMAL
-
 
     def saveModel(self):
+        if self.dicoFrame["Info"].is_training:  # en cours d'entraînement
+            return
+
         if not self.dicoFrame["Menu"].is_model:
             tkinter.messagebox.showinfo("Attention", "Il n'y a pas de modèle en cours d'utilisation")
         else:
-            temp = "Model " + getDate()
+            temp = "Model_" + getDate()
+            try:
+                nb_epoch = TraitementFichiers.getModelParametres()["TotalEpoch"]  # on récupère le nombre total d'epoch s'il existe
+                temp += "_" + str(nb_epoch) + "epoch"  # on l'inscrit dans le nom du modèle
+            except KeyError:
+                pass
+
             filename = tkinter.filedialog.asksaveasfilename(initialdir=self.parametres["URL_Dossier"] + os.sep + "Modèles save", defaultextension='.tar', initialfile=temp).replace("/", os.sep)
             if filename != "":
                 TraitementFichiers.saveModel(filename)
                 self.is_saved = True
 
-
-
     def loadModel(self):
+        if self.dicoFrame["Info"].is_training:  # en cours d'entraînement
+            return
+
         choice = True
         if self.dicoFrame["Menu"].is_model:
             if not self.is_saved:
@@ -206,7 +204,6 @@ class Application(tkinter.Tk):
                 if choice is not None:
                     if choice:
                         self.saveModel()
-        # peut-être rajouter une variable is_saved pour savoir si le fichier a été sauvegardé ou pas
         if choice is not None:  # l'utilisateur n'a pas choisi 'cancel'
             loadSavePath = self.parametres["URL_Dossier"] + os.sep + "Modèles save"
             if not os.path.exists(loadSavePath):
@@ -219,7 +216,11 @@ class Application(tkinter.Tk):
                 self.dicoFrame["Menu"].varNbLayer.set(model_params["NombreLayer"])  # on set les valeurs de nbLayer et nbDimCachee avec les paramètres du modèle chargé
                 self.dicoFrame["Menu"].varDimCach.set(model_params["NombreDimensionCachee"])
                 self.dicoFrame["Menu"].typeGenComboboite.set(model_params["TypeGeneration"])
+                self.dicoFrame["Menu"].openFolderButton["state"] = tkinter.DISABLED
+                self.dicoFrame["Menu"].typeGenComboboite["state"] = tkinter.DISABLED
                 self.dicoFrame["Menu"].is_model = True
+                self.is_saved = True  # le modèle chargé n'a pas encore été modifié
+
                 if self.dicoFrame["Menu"].paramsAvancesValue == 1:
                     self.dicoFrame["Menu"].nbDimCachee["state"] = tkinter.DISABLED
                     self.dicoFrame["Menu"].nbLayer["state"] = tkinter.DISABLED
@@ -245,14 +246,18 @@ class Application(tkinter.Tk):
         self.saveParametres()
         return self.parametres
 
+
 def credits():
     tkinter.messagebox.showinfo("Crédits", "Créé par:\nAntoine Escriva\nFlorian Bossard\nClément Guérin\nRaphaël Garnier\nClément Bruschini\n\nRepris par:\nYunfei Jia\nRaphaël Garnier")
 
+
 def about():
-    tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 3.0.0, 2021")
+    tkinter.messagebox.showinfo("À propos", "Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 2.0.0, 2021")
+
 
 def github():
     webbrowser.open("https://github.com/Karatsuban/MusicBox", new=0)
+
 
 def getDate():
     date = datetime.datetime.now()
@@ -260,8 +265,9 @@ def getDate():
     dg = dateG.isoformat()
     heureG = datetime.time(date.hour, date.minute, date.second)
     hg = heureG.strftime('%H-%M-%S')
-    temp = "".join([dg, " ", hg])
+    temp = "_".join([dg, hg])
     return temp
+
 
 def geoliste(g):
     # Récupère les infos relatives à l'écran
