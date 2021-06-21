@@ -167,7 +167,6 @@ class Menu(tkinter.Frame):
         self.genParamsButton = tkinter.Button(self, text="Générer morceaux", state=tkinter.DISABLED, width=20, bg="white", command=lambda: [self.genereNewMorceau(master)])
         self.genParamsButton.grid(row=17, column=1, sticky="E")
 
-
     def genereNewMorceau(self, master):
         if self.valide():
             self.parametres = self.master.getParametres()
@@ -178,7 +177,6 @@ class Menu(tkinter.Frame):
     def exportParametres(self):
         self.parametres = self.master.getParametres()
         ImportExportParametres.exportInCSV(self.parametres)
-
 
     def changeInterface(self):
         if self.paramsAvancesValue == 0:  # Enable everyone
@@ -225,13 +223,15 @@ class Menu(tkinter.Frame):
         if self.valide():
             if not self.is_model:
                 self.genParamsButton["state"] = tkinter.NORMAL
+                self.openFolderButton["state"] = tkinter.DISABLED
+                self.typeGenComboboite["state"] = tkinter.DISABLED
 
             self.master.saveParametres()
             self.parametres = self.master.getParametres()
             if self.paramsAvancesValue == 1:
                 self.nbDimCachee["state"] = tkinter.DISABLED
                 self.nbLayer["state"] = tkinter.DISABLED
-                self.typeGenComboboite["state"] = tkinter.DISABLED
+
             self.master.switch_frame("Info")
             self.is_model = True
         return
