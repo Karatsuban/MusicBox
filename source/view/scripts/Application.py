@@ -78,12 +78,15 @@ class Application(tkinter.Tk):
         ########################################################################
         # Parametre par defaut
         ##########################################################################
+
+        self.format_liste = ["Rythme", "Melodie"]  # formats disponibles
+
         self.parametres = {"URL_Dossier": os.getcwd()+os.sep+"data"+os.sep+"midi",
                            "NombreMorceaux": "2",
                            "DureeMorceaux": "30",
                            "TonaliteMorceaux": "A",
                            "VitesseMorceaux": "30",
-                           "TypeGeneration": "Rythme et mélodie",
+                           "TypeGeneration": self.format_liste[1],
                            "TauxApprentissage": "0.01",
                            "NombreEpoch": "200",
                            "NombreDimensionCachee": "128",
@@ -104,15 +107,14 @@ class Application(tkinter.Tk):
 
         self.dicoFrame = {
             "Lecteur": Lecteur.Lecteur(self, self.parametres),
-            "Menu": Menu.Menu(self, self.parametres),
+            "Menu": Menu.Menu(self, self.parametres, self.format_liste),
             "Info": Info.Info(self),
         }
 
-        # frame de base
-        self.frame = self.dicoFrame["Lecteur"]
+        self.frame = self.dicoFrame["Lecteur"]  # frame de base
 
         self.switch_frame("Menu")
-        self.protocol('WM_DELETE_WINDOW', lambda: [self.askWhenClose()])
+        self.protocol('WM_DELETE_WINDOW', lambda: [self.askWhenClose()])  # fonction à éxécuter lors de la fermeture de la fenêtre
 
     def askWhenClose(self):
         is_model = self.dicoFrame["Menu"].is_model
