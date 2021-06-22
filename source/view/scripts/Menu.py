@@ -18,7 +18,7 @@ hauteurBout = 2
 
 class Menu(tkinter.Frame):
 
-    def __init__(self, master, parametres):
+    def __init__(self, master, parametres, format_liste):
         tkinter.Frame.__init__(self, master)
 
         # Réglage police du titre et du texte
@@ -29,7 +29,8 @@ class Menu(tkinter.Frame):
         # Réglage arrière plan
         self.configure(bg='white')
 
-        self.parametres = parametres
+        self.parametres = parametres  # paramètres par défaut
+        self.format_liste = format_liste  # liste des formats disponibles
 
         self.is_model = False  # aucun modèle n'a été crée ou chargé
 
@@ -84,10 +85,10 @@ class Menu(tkinter.Frame):
         self.bpmMorceau.grid(row=5, column=1, sticky="W")
         self.bpmMorceauLimit = tkinter.Label(self, text="(1-360)", bg="white").grid(row=5, column=1, sticky="e")
 
-        # Choix de génération
+        # Choix du type de génération
         tkinter.Label(self, text="Type de génération", width=15, height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=6, column=0, sticky="W")
         # Création de la combobox de Choix de generation
-        self.typeGenComboboite = tkinter.ttk.Combobox(self, values=["Rythme seulement", "Rythme et mélodie"], state="readonly")
+        self.typeGenComboboite = tkinter.ttk.Combobox(self, values=self.format_liste, state="readonly")
         # Réglage de l'item actuel sur 1
         self.typeGenComboboite.current(1)
         # Placement
@@ -170,7 +171,7 @@ class Menu(tkinter.Frame):
     def genereNewMorceau(self, master):
         if self.valide():
             self.parametres = self.master.getParametres()
-            TraitementFichiers.genereNew(self.parametres)
+            TraitementFichiers.genereMorceaux(self.parametres)
             master.switch_frame("Lecteur")
         return
 
@@ -268,6 +269,7 @@ def verifMIDI(path):
     else:
         return False
 
+
 def geoliste(g):
     # Récupère les infos relatives à l'écran
     r = [i for i in range(0, len(g)) if not g[i].isdigit()]
@@ -279,4 +281,3 @@ def centrefenetre(fen):
     fen.update_idletasks()
     l, h, x, y = geoliste(fen.geometry())
     fen.geometry("%dx%d%+d%+d" % (l, h, (fen.winfo_screenwidth() - l) // 2, (fen.winfo_screenheight() - h) // 2))
-
