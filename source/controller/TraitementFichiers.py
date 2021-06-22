@@ -13,10 +13,6 @@ rnn_object = None
 listeMorceaux = None
 
 
-def genereNew(parametres):
-    genereMorceaux(parametres, listeMorceaux, rnn_object)
-
-
 def saveModel(save_path):
     parametres = rnn_object.getParametres()
     torch.save(parametres, save_path)
@@ -72,9 +68,13 @@ def conversion_en_csv(writeAddr, readAddr, name_in):
     return
 
 
-def list2string(liste):
-    string = "".join(liste)
-    return string
+def conversion_en_mid(name_out, csv_content):
+    midi_object = pm.csv_to_midi(csv_content)
+    # Save the parsed MIDI file to disk
+    with open(name_out, "wb") as output_file:
+        midi_writer = pm.FileWriter(output_file)
+        midi_writer.write(midi_object)
+    return
 
 
 def count_freq_dico(dico):
@@ -87,11 +87,6 @@ def count_freq_dico(dico):
         dico[i] = round(dico[i], 2)
     dico = sorted(dico.items(), key=operator.itemgetter(1), reverse=True)
     return dico
-
-
-def count_long_seq(string):
-    res = len(string)
-    return res
 
 
 def moyenne_seq(nbT, nbF):
@@ -133,45 +128,39 @@ def dessine_graphe(readpath, filename, savepath):
     plt.savefig(savepath+os.sep+filename.split('.')[0]+'.jpg')
 
 
-def check_conversions(parametres):  # anciennement main
+def check_conversions(parametres):
     global listeMorceaux
     # on récupère tous les noms des fichiers .mid du dossier
-    listeFichiers = [i for i in os.listdir(parametres["URL_Dossier"]) if ".mid" in i]
+    midi_path = parametres["URL_Dossier"]  # chemin du dossier contenant les .mid
+    csv_path = parametres["URL_Dossier"] + os.sep + "CSV"  # chemin du dossier contenant les .csv
+    format_path = parametres["URL_Dossier"]+os.sep+"Conversion_"+parametres["TypeGeneration"]  # chemin du dossier contenant les .format
+    graph_path = parametres["URL_Dossier"]+os.sep+"Graphiques"
+    gen_path = parametres["URL_Dossier"]+os.sep+"Resultat"
+    model_path = parametres["URL_Dossier"]+os.sep+"Modèles save"
 
-    # Bloc 1
-    os.makedirs(parametres["URL_Dossier"]+os.sep+"CSV", exist_ok=True)
-    os.makedirs(parametres["URL_Dossier"]+os.sep+"Conversion_rythme", exist_ok=True)
-    os.makedirs(parametres["URL_Dossier"]+os.sep+"Conversion_melodie", exist_ok=True)
-    os.makedirs(parametres["URL_Dossier"]+os.sep+"Resultat", exist_ok=True)
-    os.makedirs(parametres["URL_Dossier"]+os.sep+"Graphiques", exist_ok=True)
-    os.makedirs(parametres["URL_Dossier"]+os.sep+"Modèles save", exist_ok=True)
+    listeFichiersMidi = [i for i in os.listdir(midi_path) if ".mid" in i]
 
-    # on récupère tous les fichier csv du dossier csv avec addresse: csv_path
-    csv_path = parametres["URL_Dossier"] + os.sep + "CSV"
+    # création (s'ils n'existent pas) des dossiers utiles
+    os.makedirs(csv_path, exist_ok=True)  # contiendra les conversions en CSV des .mid
+    os.makedirs(gen_path, exist_ok=True)  # contiendra les fichiers générés
+    os.makedirs(graph_path, exist_ok=True)  # contiendra les graphiques
+    os.makedirs(model_path, exist_ok=True)  # contiendra les sauvegardes de modèles
+    os.makedirs(format_path, exist_ok=True)  # contiendra les fichiers format
 
-    # Bloc 2
-    # on vérifi si .csv existe déjà (si non, on les crée).
-    for midi_files in listeFichiers:
+    for midi_files in listeFichiersMidi:  # pour chaque fichier .mid ...
         nom = midi_files.replace(".mid", ".csv")
-        if nom not in os.listdir(csv_path):
-            conversion_en_csv(csv_path, parametres["URL_Dossier"], midi_files)
+        if nom not in os.listdir(csv_path):  # ... si sa conversion en .csv n'existe pas
+            conversion_en_csv(csv_path, midi_path, midi_files)  # on la crée
 
     # for fichier_csv in os.listdir(csv_path): #on parcourt les fichiers csv
-    #    dessine_graphe(csv_path, fichier_csv, parametres["URL_Dossier"]+os.sep+"Graphiques")
+    #    dessine_graphe(csv_path, fichier_csv, graph_path)
 
-    # Bloc 3
-    # on récupère tous les fichiers .format dans listeFichiersConvertis
-    if parametres["TypeGeneration"] == "Rythme seulement":
-        # on récupère tous les noms des fichiers du dossier /Conversion_rythme pour ne pas avoir à reconvertir des fichiers
-        listeFichiersConvertis = [i for i in os.listdir(parametres["URL_Dossier"]+os.sep+"Conversion_rythme")]
-
-    if parametres["TypeGeneration"] == "Rythme et mélodie":
-        # on récupère tous les noms des fichiers du dossier /Conversion_melodie pour ne pas avoir à reconvertir des fichiers
-        listeFichiersConvertis = [i for i in os.listdir(parametres["URL_Dossier"]+os.sep+"Conversion_melodie")]
+    # on récupère tous les noms des fichiers du dossier Conversion pour ne pas avoir à reconvertir des fichiers
+    listeFichiersConvertis = [i for i in os.listdir(format_path)]
 
     listeFichiersAConvertir = []
     # on vérifie si les .format existe.
-    for nom_mid in listeFichiers:
+    for nom_mid in listeFichiersMidi:
         nom_format = nom_mid.replace(".mid", ".format")  # en admettant que notre extension sera ".format"
         nom_csv = nom_mid.replace(".mid", ".csv")
         if nom_format not in listeFichiersConvertis:
@@ -181,7 +170,6 @@ def check_conversions(parametres):  # anciennement main
         listeFichiersAConvertir.append(os.listdir(csv_path)[0])
         # totalement artificiel, pour avoir au moins 1 objet morceau pour plus tard
 
-    # Bloc 4
     listeMorceaux = []  # liste d'objets de type Morceau
     # on vérifier si liseteFichiersAConvertir est vide.
     if listeFichiersAConvertir:
@@ -189,82 +177,91 @@ def check_conversions(parametres):  # anciennement main
         for csv_files in listeFichiersAConvertir:
             listeMorceaux.append(Morceau.Morceau(csv_path + os.sep + csv_files))
 
-    # Bloc 5
-    # on prépare les morceaux pour le RNN et afficher les info de data setting
-    longTotale = 0
-    counter = 0
-    contentTotaleDico = {}
-    tempDico = {}
-    noteDico = {}
-    toucheDico = {}
+    # conversion des morceaux dans le bon format
     for m in listeMorceaux:
-        counter += 1
-        if parametres["TypeGeneration"] == "Rythme seulement":
-            nom = parametres["URL_Dossier"]+os.sep+"Conversion_rythme"+os.sep+m.filename.replace(".csv", "")
-            content, ensemble_elements = m.preparer_track_rythme()  # on récupère toutes les pistes du morceau dans une liste
+        filenames, files_content = m.getFormat(parametres["TypeGeneration"])  # récupération de tous les fichiers à écrire et leurs contenus
+        for a in range(len(filenames)):
+            complete_path = format_path + os.sep + filenames[a]
+            ecrire_fichier(complete_path, files_content[a])  # pour chaque fichier, on écrit son contenu dans le dossier des conversions
+    return
 
-            if parametres["ChoixAffichageDataInfo"] == 1:  # si utilisateur a choisi d'afficher les Data info
-                contentString = list2string(content)
-                longTotale += count_long_seq(contentString)
-                for data in contentString:
-                    if data in contentTotaleDico:
-                        contentTotaleDico[data] += 1
-                    else:
-                        contentTotaleDico[data] = 1
 
-            for index in range(len(content)):
-                if content[index] != '':
-                    savename = nom+"-"+str(index+1)+".format"
-                    nb_elements = len(ensemble_elements)  # nombre d'éléments dans une note
-                    elements = "\n".join([str(ensemble_elements[k]) for k in range(nb_elements)])  # transformation en string des ensembles
-                    a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content[index]  # chaine à ecrire
-                    ecrire_fichier(savename, a_ecrire)  # on écrit chaque piste dans un fichier différent
+def statistiques(parametres):
+    format_path = parametres["URL_Dossier"]+os.sep+"Conversion_"+parametres["TypeGeneration"]
+    file_list = [i for i in os.listdir(format_path) if ".format" in i]
+    nb_files = len(file_list)
+    longTotale = 0
+    nb_elements = None
 
-        if parametres["TypeGeneration"] == "Rythme et mélodie":
-            resTab = []
-            nom = parametres["URL_Dossier"]+os.sep+"Conversion_melodie"+os.sep+m.filename.replace("csv", "format")
-            content, ensemble_elements = m.preparer_track_melodie()  # on récupère toutes les pistes du morceau
+    liste_ensemble = None
 
-            nb_elements = len(ensemble_elements)  # nombre d'éléments
-            elements = "\n".join([str(ensemble_elements[k]) for k in range(nb_elements)])  # transformations
-            a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content
-            ecrire_fichier(nom, a_ecrire)  # on écrit tout dans un seul morceau
+    for filename in os.listdir(format_path):
+        content = lire_fichier(filename)  # lecture du contenu du fichier
+        nb_elements = int(content[0])  # nombre d'éléments représentant une note dans ce format
+        if liste_ensemble is None:
+            liste_ensemble = [set() for _ in range(nb_elements)]  # création du dictionnaire
+        for i in range(nb_elements):  # on parcourt les lignes suivantes
+            liste_ensemble[i].union(eval(content[i+1]))
 
-            if parametres["ChoixAffichageDataInfo"] == 1:
-                contentTab = content.rstrip(' ').split(' ')
-                longTotale += count_long_seq(contentTab)
-                for i in range(len(contentTab)):
-                    splitTab = contentTab[i].rstrip(':').split(':')
-                    resTab.append(splitTab)
-                for data in resTab:
-                    if data[0] in tempDico:
-                        tempDico[data[0]] += 1
-                    if data[0] not in tempDico:
-                        tempDico[data[0]] = 1
-                    if data[1] in noteDico:
-                        noteDico[data[1]] += 1
-                    if data[1] not in tempDico:
-                        noteDico[data[1]] = 1
-                    if data[2] in toucheDico:
-                        toucheDico[data[2]] += 1
-                    if data[2] not in toucheDico:
-                        toucheDico[data[2]] = 1
+    # rajouter le comptage des séquences et de chaque note, quelque part... GL
+    return
 
-    if parametres["ChoixAffichageDataInfo"] == 1:
-        if parametres["TypeGeneration"] == "Rythme seulement":
-            print("----------Rythme seulement------------")
-            print("****** Nombre total de fichiers entrainés : ", counter)
-            print("****** Moyenne des sequences : ", moyenne_seq(longTotale, counter))
-            print("****** Nombre d'occurence de chaque note des sequences : ", count_freq_dico(contentTotaleDico))
-            print("--------------------------------------")
-        if parametres["TypeGeneration"] == "Rythme et mélodie":
-            print("----------Rythme et mélodie-----------")
-            print("****** Nombre total de fichiers entrainés : ", counter)
-            print("****** Moyenne des sequences : ", moyenne_seq(longTotale, counter))
-            print("****** Nombre d'occurence de chaque temp des sequences : ", len(count_freq_dico(tempDico)), count_freq_dico(tempDico))
-            print("****** Nombre d'occurence de chaque note des sequences : ", len(count_freq_dico(noteDico)), count_freq_dico(noteDico))
-            print("****** Nombre d'occurence de chaque touche des sequences : ", len(count_freq_dico(toucheDico)), count_freq_dico(toucheDico))
-            print("--------------------------------------")
+
+def get_input_liste(parametres):
+    format_path = parametres["URL_Dossier"]+os.sep+"Conversion_"+parametres["TypeGeneration"]
+    is_stat = parametres["ChoixAffichageDataInfo"] == 1  # l'utilisateur veut afficher les statistiques
+    print("is_stat = ", is_stat)
+    nb_elements = 0
+    liste_textes = []
+    liste_ensemble = None
+    liste_dicos = []  # contiendra les nombres d'occurences de chaques élément de note
+    sum_len_seq = 0
+    nb_seq = 0
+    nb_notes = 0
+    nb_fichiers = 0
+
+    for m in os.listdir(format_path):
+        nb_fichiers += 1
+
+        content = lire_fichier(format_path + os.sep + m)  # contenu du fichier
+
+        if liste_ensemble is None:
+            nb_elements = int(content[0])  # la première ligne du fichier donne le nombre d'éléments composant une note
+            liste_ensemble = [set() for _ in range(nb_elements)]  # création de la liste des ensembles si elle n'existe pas
+            liste_dicos = [{} for _ in range(nb_elements)]
+
+        for a in range(nb_elements):  # pour chaque dictionnaire lu
+            new_ensemble = eval(content[a+1])
+            liste_ensemble[a] = liste_ensemble[a].union(new_ensemble)  # on le rajoute à l'ensemble correspondant
+            if is_stat:
+                for key in new_ensemble:
+                    if key not in liste_dicos[a]:  # si cet élément n'a pas été repertorié, on le crée avec un compteur à 0
+                        liste_dicos[a][key] = 0
+
+        if is_stat:
+            for num_seq in range(len(content[nb_elements+1:])):  # parcourt des séquences
+                nb_seq += 1
+                seq = content[nb_elements+1+num_seq].replace("\n", "").split()
+                sum_len_seq += len(seq)
+                for note in seq:  # parcourt des notes
+                    nb_notes += 1
+                    for idx, val in enumerate(note.split(":")):  # parcourt des éléments des notes
+                        liste_dicos[idx][val] += 1  # mise à jour du compteur
+
+        liste_textes += content[nb_elements + 1:]  # recuperation des donnees sur les notes
+
+    if is_stat:
+        print("---------- Statistiques -----------")
+        print("Format : ", parametres["TypeGeneration"])
+        print("Nombre total fichiers entraines : ", nb_fichiers)
+        print("Nb notes moyen par sequences : ", round(sum_len_seq / nb_seq, 3))
+        for i in range(nb_elements):
+            for key, _ in liste_dicos[i].items():
+                liste_dicos[i][key] = round((liste_dicos[i][key] / nb_notes) * 100, 3)
+            print("{} valeurs possible pour element n°{}\nNb occurences valeurs element n°{} : {}".format(len(liste_dicos[i]), i, i, liste_dicos[i]))
+        print("-----------------------------------")
+
+    return liste_textes, liste_ensemble
 
 
 def train(parametres, is_model, queue, finQueue):
@@ -278,47 +275,18 @@ def train(parametres, is_model, queue, finQueue):
     rnn_object.train(int(parametres["NombreEpoch"]), int(parametres["NombreSequenceBatch"]), queue, finQueue)  # on entraîne le modèle
 
 
-def get_input_liste(parametres):
-    liste_textes = []
-    liste_ensemble = None
-    if parametres["TypeGeneration"] == "Rythme seulement":
-        format_path = parametres["URL_Dossier"] + os.sep + "Conversion_rythme"
-    elif parametres["TypeGeneration"] == "Rythme et mélodie":
-        format_path = parametres["URL_Dossier"] + os.sep + "Conversion_melodie"
-
-    for m in os.listdir(format_path):
-        content = lire_fichier(format_path + os.sep + m)
-        nb_elements = int(content[0])  # la première ligne du fichier donne le nombre d'éléments composant une note
-
-        if liste_ensemble is None:
-            liste_ensemble = [set() for _ in range(nb_elements)]
-
-        for a in range(nb_elements):
-            liste_ensemble[a] = liste_ensemble[a].union(eval(content[a+1]))  # on rajoute à l'ensemble
-
-        liste_textes += content[nb_elements + 1:]  # recuperation des donnees sur les notes
-    return liste_textes, liste_ensemble
-
-
-def genereMorceaux(parametres, listeMorceaux, rnn_object):
+def genereMorceaux(parametres):
     out = rnn_object.generate(int(parametres["NombreMorceaux"]), int(parametres["DureeMorceaux"]))  # on génère les morceaux en fonction des paramètres
+    gen_path = parametres["URL_Dossier"] + os.sep + "Resultat"
     date = datetime.datetime.now()
     dateG = datetime.date(date.year, date.month, date.day)
     dg = dateG.isoformat()
     heureG = datetime.time(date.hour, date.minute, date.second)
     hg = heureG.strftime('%H-%M-%S')
-    if parametres["TypeGeneration"] == "Rythme seulement":
-        temp = "".join([dg, " ", hg, " ", "R"])
-    elif parametres["TypeGeneration"] == "Rythme et mélodie":
-        temp = "".join([dg, " ", hg, " ", "M"])
+    temp = "".join([dg, " ", hg, " ", parametres["TypeGeneration"]])
 
     for index in range(len(out)):
-        save_name = str(temp)+" "+str(index)
-        if parametres["TypeGeneration"] == "Rythme seulement":
-            listeMorceaux[0].format_to_csv_rythme(out[index], save_name)  # enregistre le morceau sous format MIDI
-        elif parametres["TypeGeneration"] == "Rythme et mélodie":
-            listeMorceaux[0].format_to_csv(out[index], save_name)  # enregistre le morceau sous format MIDI
-
-
-# if __name__ == "__main__":
-#     main()
+        save_name = gen_path+os.sep+str(temp)+"_"+str(index)+".mid"
+        csv_content = listeMorceaux[0].getCSV(out[index], parametres["TypeGeneration"])
+        conversion_en_mid(save_name, csv_content)
+    return
