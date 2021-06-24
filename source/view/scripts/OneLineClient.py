@@ -3,6 +3,7 @@ from source.controller import TraitementFichiers
 import os
 import queue
 
+
 class LineClient:
 
     def __init__(self):
@@ -35,7 +36,7 @@ class LineClient:
             "DureeMorceaux": ["INT", 5, 1000],
             "TonaliteMorceaux": ["LIST", ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"]],
             "VitesseMorceaux": ["INT", 1, 360],
-            "TypeGeneration": ["LIST", ["Melodie", "Rythme"]],
+            "TypeGeneration": ["LIST", ["Melodie", "Rythme", "Melodie_ttt", "Melodie_saut"]],
             "TauxApprentissage": ["FLOAT", 0, 1],
             "NombreEpoch": ["INT", 1, 1000000],
             "NombreDimensionCachee": ["INT", 16, 2048],
@@ -56,7 +57,6 @@ class LineClient:
             "Create": "0",
             "Man": "0",
         }
-
 
     def get_user_param(self):
         param_input = sys.argv[1:len(sys.argv)]  # on ne prends pas le 1er arg, car c'est le nom du script
@@ -131,7 +131,6 @@ class LineClient:
         print("=================================== sep line ===================================")
         return
 
-
     def saveModel(self, nom):
         if ".tar" in nom:
             savePath = self.parametres["URL_Dossier"] + os.sep + "Modèles save" + os.sep + nom
@@ -162,11 +161,10 @@ class LineClient:
         return
 
     def genererMorceau(self):
-        TraitementFichiers.genereNew(self.parametres)
+        TraitementFichiers.genereMorceaux(self.parametres)
         print("Les fichiers midi ont été générer !")
         print("=================================== sep line ===================================")
         return
-
 
     def getParametres(self):
         return self.parametres
@@ -195,7 +193,6 @@ class LineClient:
                 "-----------------------------------------------------------")
 
         print(tuto)
-
 
     def trainning(self):
         load = self.user_param["Load"].replace(" ", "").split(",")

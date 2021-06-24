@@ -40,7 +40,7 @@ class LineClient:
                                  "DureeMorceaux": ["INT", 5, 1000],
                                  "TonaliteMorceaux": ["LIST", ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"]],
                                  "VitesseMorceaux": ["INT", 1, 360],
-                                 "TypeGeneration": ["LIST", ["Rythme", "Melodie"]],
+                                 "TypeGeneration": ["LIST", ["Rythme", "Melodie", "Melodie_ttt", "Melodie_saut"]],
                                  "TauxApprentissage": ["FLOAT", 0, 1],
                                  "NombreEpoch": ["INT", 1, 1000000],
                                  "NombreDimensionCachee": ["INT", 16, 2048],
@@ -256,7 +256,7 @@ class LineClient:
 
     def genererNewMorceau(self):
         if self.is_model:
-            TraitementFichiers.genereNew(self.parametres)
+            TraitementFichiers.genereMorceaux(self.parametres)
             print("Les fichiers ont ete generes !")
         else:
             print("Aucun modele n'est en cours d'utilisation !")

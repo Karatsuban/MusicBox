@@ -79,7 +79,7 @@ class Application(tkinter.Tk):
         # Parametre par defaut
         ##########################################################################
 
-        self.format_liste = ["Rythme", "Melodie"]  # formats disponibles
+        self.format_liste = ["Rythme", "Melodie", "Melodie_ttt", "Melodie_saut"]  # formats disponibles
 
         self.parametres = {"URL_Dossier": os.getcwd()+os.sep+"data"+os.sep+"midi",
                            "NombreMorceaux": "2",
