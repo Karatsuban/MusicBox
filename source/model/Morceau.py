@@ -47,7 +47,7 @@ class Morceau:
         self.note_to_time_dict = None
         self.liste_notes = []
 
-        self.format_liste = ["Rythme", "Melodie"]  # formats disponibles
+        self.format_liste = ["Rythme", "Melodie", "Melodie_ttt", "Melodie_saut"]  # formats disponibles
 
         if ".csv" not in self.filename:
             print("Erreur :  format invalide (.csv expected, .{} got)".format(self.filename.split('.')[-1]))
@@ -205,6 +205,42 @@ class Morceau:
                 notesListe.append(duree)
         return notesListe
 
+    def positionMesure(self, piste):
+        # pour la piste demandée, renvoie la même piste avec les positions de chaque appui/relâchement de touche dans sa mesure
+        L = []
+        duree_mesure = self.tsNum * self.tempsNoteRef  # durée totale d'une mesure
+        time2 = 0  # temps de "fin" de la note "0"
+        debut_mesure = 0  # temps de début de la mesure
+        position = 1
+        while piste:
+
+            note_deb = piste[0].split(",")
+            time1 = int(note_deb[1])  # temps de début de la note
+            touche = int(note_deb[4])  # numéro de la touche
+
+            if time1 > time2:  # si la note actuelle n'est pas jouée directement après la fin de la note précédente
+                position += 1
+
+            b = 0
+            note_fin = [-1, -1, -1, -1, -1]
+            while int(note_fin[4]) != touche:  # on cherche la note qui termine
+                b += 1
+                note_fin = piste[b].split(",")
+            time2 = int(note_fin[1])  # récupération temps de fin de la note
+
+            if time1 - debut_mesure >= duree_mesure:
+                position = 1
+                debut_mesure = time1
+
+            L.append([piste[0], position])  # on sauvegarde la position dans la mesure
+            L.append([piste[b], position])
+
+            position += 1
+
+            piste = piste[1:b] + piste[b + 1:]  # on enleve les deux lignes
+
+        return L
+
     # **********************************************************************************
 
     def getFormat(self, format_name):
@@ -234,6 +270,23 @@ class Morceau:
             a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content
             files_content.append(a_ecrire)
 
+        elif format_name == "Melodie_ttt":
+            filenames.append(self.filename.replace(".csv", ".format"))
+            content, ensemble_elements = self.preparer_track_melodie_ttt()
+            nb_elements = len(ensemble_elements)  # nombre d'éléments
+            elements = "\n".join([str(ensemble_elements[k]) for k in range(nb_elements)])  # transformations
+            a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content
+            files_content.append(a_ecrire)
+
+        elif format_name == "Melodie_saut":
+            filenames.append(self.filename.replace("csv", "format"))
+            content, ensemble_elements = self.preparer_track_melodie_saut()  # on récupère toutes les pistes du morceau
+
+            nb_elements = len(ensemble_elements)  # nombre d'éléments
+            elements = "\n".join([str(ensemble_elements[k]) for k in range(nb_elements)])  # transformations
+            a_ecrire = "\n".join([str(nb_elements), elements]) + "\n" + content
+            files_content.append(a_ecrire)
+
         return filenames, files_content
 
     def getCSV(self, values, format_name):
@@ -245,7 +298,10 @@ class Morceau:
             csv_content = self.format_to_csv_rythme(values)
         elif format_name == "Melodie":
             csv_content = self.format_to_csv_melodie(values)
-
+        elif format_name == "Melodie_ttt":
+            csv_content = self.format_to_csv_melodie_ttt(values)
+        elif format_name == "Melodie_saut":
+            csv_content = self.format_to_csv_melodie_saut(values)
         return csv_content
 
     # Méthodes le format RYTHME ==========================
@@ -411,41 +467,6 @@ class Morceau:
         chaine_retour, ensemble_elements = self.preparer_track_melodie_select(L)
         return chaine_retour, ensemble_elements
 
-    def positionMesure(self, piste):
-        L = []
-        duree_mesure = self.tsNum * self.tempsNoteRef  # durée totale d'une mesure
-        time2 = 0  # temps de "fin" de la note "0"
-        debut_mesure = 0  # temps de début de la mesure
-        position = 1
-        while piste:
-
-            note_deb = piste[0].split(",")
-            time1 = int(note_deb[1])  # temps de début de la note
-            touche = int(note_deb[4])  # numéro de la touche
-
-            if time1 > time2:  # si la note actuelle n'est pas jouée directement après la fin de la note précédente
-                position += 1
-
-            b = 0
-            note_fin = [-1, -1, -1, -1, -1]
-            while int(note_fin[4]) != touche:  # on cherche la note qui termine
-                b += 1
-                note_fin = piste[b].split(",")
-            time2 = int(note_fin[1])  # récupération temps de fin de la note
-
-            if time1 - debut_mesure >= duree_mesure:
-                position = 1
-                debut_mesure = time1
-
-            L.append([piste[0], position])  # on sauvegarde la position dans la mesure
-            L.append([piste[b], position])
-
-            position += 1
-
-            piste = piste[1:b] + piste[b + 1:]  # on enleve les deux lignes
-
-        return L
-
     def format_to_csv_melodie(self, entree):  # transforme une chaine sous le format et renvoie le csv associé
         header = "0, 0, Header, {0}, {1}, {2}\n".format(self.format, self.nbTracks, self.division)
         start1 = "1, 0, Start_track\n"
@@ -483,6 +504,233 @@ class Morceau:
         temps += duree_n
         liste_note.sort()  # on trie les notes dans l'ordre croissant
 
+        tempo2 = "1, {0}, Tempo, {1}\n".format(temps, 857142)
+        end1 = "1, {0}, End_track\n".format(temps)  # fin du track au temps du dernier tempo
+        start2 = "2, 0, Start_track\n"
+
+        csv_notes_list += [tempo2, end1, start2]
+
+        for note in liste_note:
+            csv_notes_list.append(note[1])
+
+        end2 = "2, {0}, End_track\n".format(temps)  # temps de la dernière note
+        end_of_file = "0, 0, End_of_file"
+
+        csv_notes_list += [end2, end_of_file]
+
+        return csv_notes_list
+
+    # Méthodes pour le format MELODIE temps:type:touche (ttt) ========================
+
+    def preparer_track_melodie_ttt(self, numero=None):
+        # ttt = temps:type:touche
+        if numero is None:  # on récupère toutes les pistes
+            L = []
+            for a in range(self.nbTracks):
+                piste = self.trackList[a]
+                if piste:
+                    for note in piste:
+                        time = int(note.split(",")[1])  # on récupère le temps pour le triage
+                        L.append([time, note])  # on ajoute toutes les notes dans la même liste
+            L.sort()  # triage de la liste des notes
+            L = [k[1] for k in L]
+        else:
+            L = self.get_track(numero)  # on récupère la seule piste demandée
+        chaine_retour, ensemble_elements = self.preparer_track_melodie_select_ttt(L)
+        return chaine_retour, ensemble_elements
+
+    def preparer_track_melodie_select_ttt(self, L):
+        # ttt = temps:type:touche
+        nb_elements = 3
+        chaine_retour = ""  # chaine de retour
+        save = 0
+        ensemble_elements = [{"@", "&"} for _ in range(nb_elements)]  # on crée autant d'ensembles qu'il y a d'éléments dans la note
+        chaine_retour += ":".join(["@" for _ in range(nb_elements)]) + " "
+        while L:
+            line1 = L[0].split(",")  # transformation en liste
+            piste1 = int(line1[0])  # récupérer la piste
+            time1 = int(line1[1])  # récupérer le Time
+            note = int(line1[4])  # récupérer la Note
+
+            b = 0
+            line2 = [-1, -1, -1, -1, -1, -1]
+            while int(line2[4]) != note or int(line2[0]) != piste1:  # on cherche la note qui termine
+                b += 1
+                line2 = L[b].split(",")
+
+            time2 = int(line2[1])  # récupération deuxième temps
+            duree = self.arrondi_note(time2 - time1)
+            type_note = self.time_to_note_dict[duree]
+
+            new_note = str(time1 - save) + ":" + str(type_note) + ":" + str(note)
+
+            new_note_split = new_note.split(":")
+            for a in range(len(new_note_split)):
+                ensemble_elements[a].add(new_note_split[a])  # on ajoute les nouveaux éléments à leurs ensembles respectifs
+
+            chaine_retour += new_note + " "  # on ajoute la note suivie d'un espace au morceau
+
+            save = time1
+
+            L = L[1:b] + L[b + 1:]  # on enleve les deux lignes
+        chaine_retour += ":".join(["&" for _ in range(nb_elements)])
+        return chaine_retour, ensemble_elements
+
+    def format_to_csv_melodie_ttt(self, entree):  # transforme une chaine sous le format et renvoie le csv associé
+        # ttt = temps:type:touche
+        header = "0, 0, Header, {0}, {1}, {2}\n".format(self.format, self.nbTracks, self.division)
+        start1 = "1, 0, Start_track\n"
+        smpte = "1, 0, SMPTE_offset, {0}, {1}, {2}, {3}, {4}\n".format(self.smpteHour, self.smpteMinute, self.smpteSecond, self.smpteFrame, self.smpteFracFrame)
+        time_s = "1, 0, Time_signature, {0}, {1}, {2}, {3}\n".format(self.tsNum, self.tsDenom, self.tsClick, self.tsNotesQ)
+        key_s = "1, 0, Key_signature, {0},{1}".format(self.ksKey, self.ksMinMaj)
+        tempo1 = "1, 0, Tempo, {0}\n".format(857142)
+        origine = '1, 0, Text_t, "Song generated by MusicBox (https://github.com/Karatsuban/MusicBox)"\n'
+
+        csv_notes_list = [header, start1, origine]
+        if "None"not in smpte:
+            csv_notes_list += [smpte]
+
+        csv_notes_list += [time_s]
+
+        if "None" not in key_s:
+            csv_notes_list += [key_s]
+
+        csv_notes_list += [tempo1]
+
+        all_notes = entree.replace("\n", "").split(" ")  # on découpe l'entrée note par note
+        temps = 0
+        duree_n = 0
+        liste_note = []
+
+        for note in all_notes:
+            nuplet = note.split(":")
+            tps, duree_n, note_nb = nuplet
+            tps = int(tps)
+            duree_n = int(list(self.time_to_note_dict.keys())[list(self.time_to_note_dict.values()).index(duree_n)])
+            note_nb = int(note_nb)
+            temps += tps  # on incrémente le temps global
+            liste_note.append([temps, "2, {0}, Note_on_c, 0, {1}, {2}\n".format(temps, note_nb, 80)])  # la velocité est mise à 80 par défaut (choix sans raison)
+            liste_note.append([temps + duree_n, "2, {0}, Note_on_c, 0, {1}, {2}\n".format(temps + duree_n, note_nb, 0)])  # la vélocité est mise à 0 (équivalent de Note_off_c)
+        temps += duree_n
+        liste_note.sort()  # on trie les notes dans l'ordre croissant
+
+        tempo2 = "1, {0}, Tempo, {1}\n".format(temps, 857142)
+        end1 = "1, {0}, End_track\n".format(temps)  # fin du track au temps du dernier tempo
+        start2 = "2, 0, Start_track\n"
+
+        csv_notes_list += [tempo2, end1, start2]
+
+        for note in liste_note:
+            csv_notes_list.append(note[1])
+
+        end2 = "2, {0}, End_track\n".format(temps)  # temps de la dernière note
+        end_of_file = "0, 0, End_of_file"
+
+        csv_notes_list += [end2, end_of_file]
+
+        return csv_notes_list
+
+    # Méthodes pour le format MELODIE SAUT ========================
+
+    def preparer_track_melodie_select_saut(self, L):
+        nb_elements = 3
+        chaine_retour = ""  # chaine de retour
+        save = 0
+        ensemble_elements = [{"@", "&"} for _ in range(nb_elements)]  # on crée autant d'ensembles qu'il y a d'éléments dans la note
+        chaine_retour += ":".join(["@" for _ in range(nb_elements)]) + " "
+
+        last_touche = 45
+
+        while L:
+            line1 = L[0].split(",")  # transformation en liste
+            piste1 = int(line1[0])  # récupérer la piste
+            time1 = int(line1[1])  # récupérer le Time
+            note = int(line1[4])  # récupérer la Note
+
+            b = 0
+            line2 = [-1, -1, -1, -1, -1, -1]
+            while int(line2[4]) != note or int(line2[0]) != piste1:  # on cherche la note qui termine
+                b += 1
+                line2 = L[b].split(",")
+
+            time2 = int(line2[1])  # récupération deuxième temps
+            duree = self.arrondi_note(time2 - time1)
+            type_note = self.time_to_note_dict[duree]
+
+            saut_touche = note - last_touche
+            new_note = str(time1 - save) + ":" + str(type_note) + ":" + str(saut_touche)
+            last_touche = note
+
+            new_note_split = new_note.split(":")
+            for a in range(len(new_note_split)):
+                ensemble_elements[a].add(new_note_split[a])  # on ajoute les nouveaux éléments à leurs ensembles respectifs
+
+            chaine_retour += new_note + " "  # on ajoute la note suivie d'un espace au morceau
+
+            save = time1
+
+            L = L[1:b] + L[b + 1:]  # on enleve les deux lignes
+        chaine_retour += ":".join(["&" for _ in range(nb_elements)])
+        return chaine_retour, ensemble_elements
+
+    def preparer_track_melodie_saut(self, numero=None):
+        if numero is None:  # on récupère toutes les pistes
+            L = []
+            for a in range(self.nbTracks):
+                piste = self.trackList[a]
+                for note in piste:
+                    time = int(note.split(",")[1])  # on récupère le temps pour le triage
+                    L.append([time, note])  # on ajoute toutes les notes dans la même liste
+            L.sort()  # triage de la liste des notes
+            L = [k[1] for k in L]
+        else:
+            L = self.get_track(numero)  # on récupère la seule piste demandée
+        chaine_retour, ensemble_elements = self.preparer_track_melodie_select_saut(L)
+        return chaine_retour, ensemble_elements
+
+    def format_to_csv_melodie_saut(self, entree):  # transforme une chaine sous le format et renvoie le csv associé
+        header = "0, 0, Header, {0}, {1}, {2}\n".format(self.format, self.nbTracks, self.division)
+        start1 = "1, 0, Start_track\n"
+        smpte = "1, 0, SMPTE_offset, {0}, {1}, {2}, {3}, {4}\n".format(self.smpteHour, self.smpteMinute, self.smpteSecond, self.smpteFrame, self.smpteFracFrame)
+        time_s = "1, 0, Time_signature, {0}, {1}, {2}, {3}\n".format(self.tsNum, self.tsDenom, self.tsClick, self.tsNotesQ)
+        key_s = "1, 0, Key_signature, {0},{1}".format(self.ksKey, self.ksMinMaj)
+        tempo1 = "1, 0, Tempo, {0}\n".format(857142)
+        origine = '1, 0, Text_t, "Song generated by MusicBox (https://github.com/Karatsuban/MusicBox)"'
+
+        csv_notes_list = [header, start1, origine]
+        if "None" not in smpte:
+            csv_notes_list += [smpte]
+
+        csv_notes_list += [time_s]
+
+        if "None" not in key_s:
+            csv_notes_list += [key_s]
+
+        csv_notes_list += [tempo1]
+
+        all_notes = entree.replace("\n", "").split(" ")  # on découpe l'entrée note par note
+        temps = 0
+        duree_n = 0
+        liste_note = []
+
+        last_touche = 45
+        for note in all_notes:
+            nuplet = note.split(":")
+            tps, duree_n, note_nb = nuplet
+            tps = int(tps)
+            duree_n = int(list(self.time_to_note_dict.keys())[list(self.time_to_note_dict.values()).index(duree_n)])
+            note_nb = int(note_nb)
+
+            note_nb += last_touche
+            note_nb %= 88
+            last_touche = note_nb
+
+            temps += tps  # on incrémente le temps global
+            liste_note.append([temps, "2, {0}, Note_on_c, 0, {1}, {2}\n".format(temps, note_nb, 80)])  # la velocité est mise à 80 par défaut (choix sans raison)
+            liste_note.append([temps + duree_n, "2, {0}, Note_on_c, 0, {1}, {2}\n".format(temps + duree_n, note_nb, 0)])  # la vélocité est mise à 0 (équivalent de Note_off_c)
+        temps += duree_n
+        liste_note.sort()  # on trie les notes dans l'ordre croissant
+        print(liste_note)
         tempo2 = "1, {0}, Tempo, {1}\n".format(temps, 857142)
         end1 = "1, {0}, End_track\n".format(temps)  # fin du track au temps du dernier tempo
         start2 = "2, 0, Start_track\n"
