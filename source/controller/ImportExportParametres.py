@@ -26,26 +26,13 @@ def exportInCSV(parametres):
 def importFromCSV():
     with open("data" + os.sep + "parametres.csv", newline='') as csvfile:
         reader = csv.DictReader(csvfile)
-        parametres = {}
         for row in reader:
-            parametres['URL_Dossier'] = row['URL_Dossier']
-            parametres['NombreMorceaux'] = row['NombreMorceaux']
-            parametres['DureeMorceaux'] = row['DureeMorceaux']
-            parametres['TonaliteMorceaux'] = row['TonaliteMorceaux']
-            parametres['VitesseMorceaux'] = row['VitesseMorceaux']
-            parametres['TypeGeneration'] = row['TypeGeneration']
-            parametres['TauxApprentissage'] = row['TauxApprentissage']
-            parametres['NombreEpoch'] = row['NombreEpoch']
-            parametres['NombreDimensionCachee'] = row['NombreDimensionCachee']
-            parametres['NombreLayer'] = row['NombreLayer']
-            parametres['NombreSequenceBatch'] = row['NombreSequenceBatch']
-            parametres["ChoixAffichageDataInfo"] = row["ChoixAffichageDataInfo"]
+            parametres = dict(row)
     return parametres
 
 
 def getURL():
     with open("data" + os.sep + "parametres.csv", newline='') as csvfile:
         reader = csv.DictReader(csvfile)
-        parametres = {}
         for row in reader:
             return row['URL_Dossier']
