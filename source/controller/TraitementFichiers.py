@@ -4,7 +4,6 @@
 import datetime
 from source.model import RNN, Morceau
 import py_midicsv as pm
-import operator
 import os
 import matplotlib.pyplot as plt
 import torch
@@ -77,23 +76,6 @@ def conversion_en_mid(name_out, csv_content):
     return
 
 
-def count_freq_dico(dico):
-    long = 0
-    tabValue = dico.values()
-    for i in tabValue:
-        long += i
-    for i in dico:
-        dico[i] /= long
-        dico[i] = round(dico[i], 2)
-    dico = sorted(dico.items(), key=operator.itemgetter(1), reverse=True)
-    return dico
-
-
-def moyenne_seq(nbT, nbF):
-    moyenneSeq = nbT / nbF
-    return moyenneSeq
-
-
 def dessine_graphe(readpath, filename, savepath):
     plt.clf()
     morceau = Morceau.Morceau(readpath+os.sep+filename)
@@ -141,9 +123,9 @@ def check_conversions(parametres):
     listeFichiersMidi = [i for i in os.listdir(midi_path) if ".mid" in i]
 
     # création (s'ils n'existent pas) des dossiers utiles
+    os.makedirs(graph_path, exist_ok=True)  # contiendra les graphiques
     os.makedirs(csv_path, exist_ok=True)  # contiendra les conversions en CSV des .mid
     os.makedirs(gen_path, exist_ok=True)  # contiendra les fichiers générés
-    os.makedirs(graph_path, exist_ok=True)  # contiendra les graphiques
     os.makedirs(model_path, exist_ok=True)  # contiendra les sauvegardes de modèles
     os.makedirs(format_path, exist_ok=True)  # contiendra les fichiers format
 
@@ -186,31 +168,9 @@ def check_conversions(parametres):
     return
 
 
-def statistiques(parametres):
-    format_path = parametres["URL_Dossier"]+os.sep+"Conversion_"+parametres["TypeGeneration"]
-    file_list = [i for i in os.listdir(format_path) if ".format" in i]
-    nb_files = len(file_list)
-    longTotale = 0
-    nb_elements = None
-
-    liste_ensemble = None
-
-    for filename in os.listdir(format_path):
-        content = lire_fichier(filename)  # lecture du contenu du fichier
-        nb_elements = int(content[0])  # nombre d'éléments représentant une note dans ce format
-        if liste_ensemble is None:
-            liste_ensemble = [set() for _ in range(nb_elements)]  # création du dictionnaire
-        for i in range(nb_elements):  # on parcourt les lignes suivantes
-            liste_ensemble[i].union(eval(content[i+1]))
-
-    # rajouter le comptage des séquences et de chaque note, quelque part... GL
-    return
-
-
 def get_input_liste(parametres):
     format_path = parametres["URL_Dossier"]+os.sep+"Conversion_"+parametres["TypeGeneration"]
-    is_stat = parametres["ChoixAffichageDataInfo"] == 1  # l'utilisateur veut afficher les statistiques
-    print("is_stat = ", is_stat)
+    is_stat = parametres["ChoixAffichageStatistiques"] == 1  # l'utilisateur veut afficher les statistiques
     nb_elements = 0
     liste_textes = []
     liste_ensemble = None
@@ -272,21 +232,65 @@ def train(parametres, is_model, queue, finQueue):
         check_conversions(parametres)  # on vérifie que toutes les conversions ont bien été faites
         liste_textes, liste_ensembles = get_input_liste(parametres)
         rnn_object = RNN.RNN(liste_textes, rnn_parametres, liste_ensembles)  # ...on crée un modèle avec les bons paramètres
-    rnn_object.train(int(parametres["NombreEpoch"]), int(parametres["NombreSequenceBatch"]), queue, finQueue)  # on entraîne le modèle
+    list_losses, list_acc = rnn_object.train(int(parametres["NombreEpoch"]), int(parametres["NombreSequenceBatch"]), queue, finQueue)  # on entraîne le modèle
+    if parametres["ChoixAffichageGraphiques"] == 1:
+        graph_path = parametres["URL_Dossier"]+os.sep+"Graphiques"
+        saveGraph(graph_path, list_losses, list_acc)
+    return
 
 
 def genereMorceaux(parametres):
     out = rnn_object.generate(int(parametres["NombreMorceaux"]), int(parametres["DureeMorceaux"]))  # on génère les morceaux en fonction des paramètres
     gen_path = parametres["URL_Dossier"] + os.sep + "Resultat"
-    date = datetime.datetime.now()
-    dateG = datetime.date(date.year, date.month, date.day)
-    dg = dateG.isoformat()
-    heureG = datetime.time(date.hour, date.minute, date.second)
-    hg = heureG.strftime('%H-%M-%S')
-    temp = "".join([dg, " ", hg, " ", parametres["TypeGeneration"]])
+    temp = getDate()
+    temp += "_"+parametres["TypeGeneration"]
 
     for index in range(len(out)):
         save_name = gen_path+os.sep+str(temp)+"_"+str(index)+".mid"
         csv_content = listeMorceaux[0].getCSV(out[index], parametres["TypeGeneration"])
         conversion_en_mid(save_name, csv_content)
+    return
+
+
+def getDate():
+    date = datetime.datetime.now()
+    dateG = datetime.date(date.year, date.month, date.day)
+    dg = dateG.isoformat()
+    heureG = datetime.time(date.hour, date.minute, date.second)
+    hg = heureG.strftime('%H-%M-%S')
+    temp = "_".join([dg, hg])
+    return temp
+
+
+def saveGraph(graph_path, list_losses, list_acc):
+    nb_epoch = len(list_acc)  # nombre d'epoch effectuée
+    nb_elements = len(list_losses)  # nombre d'éléments par note
+    couleurs = ['b', 'g', 'r', 'k', 'c', 'm', 'y', 'w']
+
+    fig_losses, axe_losses = plt.subplots()  # une figure par loss d'élément
+    fig_acc, axe_acc = plt.subplots()  # une figure pour l'accuracy
+
+    x = [k for k in range(nb_epoch)]  # abscisse des graphes (numéro d'epoch)
+    for a in range(nb_elements):
+        label_name = "Loss element n°" + str(a)
+        axe_losses.plot(x, list_losses[a], label=label_name, color=couleurs[a % 8])  # un graphe par élément
+    axe_losses.set_title("Loss de chaque element de note par epoch")
+    axe_losses.set_xlabel("Nb Epochs")
+    axe_losses.set_ylabel("Loss")
+    axe_losses.legend()
+
+    axe_acc.plot(x, list_acc, label="Accuracy", color="b")  # création du graphe pour l'accuracy
+    axe_acc.set_title("Accuracy du modèle par epoch")
+    axe_acc.set_xlabel("Nb Epochs")
+    axe_acc.set_ylabel("Accuracy")
+    axe_acc.legend()
+
+    total_epoch = getModelParametres()["TotalEpoch"]  # on récupère le nombre total depoch du modèle
+    loss_savename = getDate()+"_"+str(total_epoch)+"_Graph_Loss.png"  # création du nom de sauvegarde
+    acc_savename = getDate()+"_"+str(total_epoch)+"_Graph_Accuracy.png"
+
+    # enregistrement des graphiques
+    fig_losses.savefig(graph_path+os.sep+loss_savename)
+    fig_acc.savefig(graph_path+os.sep+acc_savename)
+
     return
