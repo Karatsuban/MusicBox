@@ -5,7 +5,7 @@ import torch
 from torch import nn
 import numpy as np
 import time
-from math import ceil, log
+from math import ceil, log, exp
 import random
 
 
@@ -203,6 +203,7 @@ class RNN:
     def pick_batch(self):
         L = []
         to_pick = self.batch_size
+        is_epoch = False
         while to_pick != 0:  # tant qu'on a pas pas self.batch_size sequences
             if self.shuffle:  # on doit mélanger la liste
                 self.shuffle = False
@@ -216,7 +217,8 @@ class RNN:
             if self.debut_pick >= len(self.training_files):  # si l'indice est trop grand
                 self.debut_pick = 0  # on le ramène au début
                 self.shuffle = True  # il faudra mélanger à nouveau
-        return L  # on renvoie les séquences
+                is_epoch = True
+        return L, is_epoch  # on renvoie les séquences
 
     def train(self, nb_epochs, batch_size, queue, finQueue):
         self.lstm.train()
@@ -225,27 +227,30 @@ class RNN:
         self.nb_epochs = nb_epochs
         self.batch_size = batch_size
 
-        list_loss = []
-
-        # Boucle d'entraînement
-        start = time.time()
-        previous = start
-
-        loss = 0
-        continu = True
-        epoch = 1
+        list_losses = [[] for _ in range(self.nb_elements)]  # contient les loss de chaque élément sur toutes les epoch
+        losses_epoch = [0 for _ in range(self.nb_elements)]  # contient les loss de chaque élément pour une seule époch
+        nb_batch = 0  # nombre de batch dans une epoch
+        list_acc = []  # contient les accuracy de tous les batchs d'une epoch
+        acc_epoch = []  # contient les accuracy de chaque epoch
+        continu = True  # variable gérant la sortie de la boucle d'entraînement
+        epoch = 0  # compteur d'epoch
         info = ""
-        printInterval = 1
-        lrInterval = 20
+        printInterval = 1  # affichage des info toutes les "printInterval" epoch
+        lrInterval = 1  # mise à jour du lr toutes les "lrInterval" epoch
         
         l_idx = [0]
         for a in self.list_dict_size:
             l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
             
-        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.9)
-               
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lrInterval, gamma=0.99)
+
+        start = time.time()
+        previous = start
+
+        # Boucle d'entraînement
         while continu:
-            batch_seq = self.pick_batch()  # on récupère les séquences de batch
+            batch_seq, is_epoch = self.pick_batch()  # on récupère les séquences de batch et un booléen pour savvoir si on a fini une epoch
+            nb_batch += 1
             target_seq = []
 
             lengths = [len(s)-1 for s in batch_seq]
@@ -286,51 +291,52 @@ class RNN:
             out_cut = []
             for idx in range(self.nb_elements):
                 indexes = torch.tensor([k for k in range(l_idx[idx], l_idx[idx+1])]).to(self.device)
-                elem_tensor = nn.functional.softmax(torch.index_select(out, 1, indexes), dim=1) # on récupère la bonne partie du tenseur qu'on ajoute à la liste
+                elem_tensor = nn.functional.softmax(torch.index_select(out, 1, indexes), dim=1)  # on récupère la bonne partie du tenseur qu'on ajoute à la liste
                 out_cut.append(elem_tensor)
                 out.index_copy_(1, indexes, elem_tensor)
-            acc = 100 * (1 - (out - target2_tensor).pow(2).sum()/(4*sum(lengths))).float()
-
+            acc = 100 * (1 - (out - target2_tensor).pow(2).sum()/(self.nb_elements*sum(lengths))).float()
+            acc_epoch.append(acc)  # ajout de l'accuracy du batch à la liste des accuracy sur une epoch
 
             l_err = [self.loss_function(out_cut[k], tensor_target[k]).to(self.device) for k in range(self.nb_elements)]   # calcul de la loss pour chaque élément d'une note
-            if len(l_err) > 1:
-                err = torch.log(sum(l_err))
-            else:
-                err = l_err[0]
 
-            list_loss.append(err.item())
-            loss += err.item()
+            for a in range(self.nb_elements):
+                losses_epoch[a] += l_err[a]  # on ajoute les erreurs à la liste
 
-            self.optimizer.zero_grad()  # on efface les gradients de l'entraînement précédent
-            err.backward()
-            self.optimizer.step()
+            if is_epoch:  # on a fini une epoch
+                for a in range(self.nb_elements):
+                    list_losses[a].append(losses_epoch[a].item() / nb_batch)  # on ajoute les nouvelles erreurs à la liste complète des loss
+                err = torch.mul(sum(losses_epoch), 1 / (self.nb_elements * nb_batch))  # on calcule l'erreur sur toute l'epoch et sur tous les elements
+                acc = float(sum(acc_epoch) / nb_batch)  # moyenne de l'accuracy sur tous les batch d'une epoch
+                list_acc.append(acc)  # ajout de l'accuracy d'une epoch
 
-            if epoch % printInterval == 0:
-                print("{}/{} \t Loss = {} \tPerplexity = {} \tAccuracy = {}% \ttime taken = {}".format(epoch, self.nb_epochs, "%.5f" % (loss/printInterval), "%.5f" % np.exp(loss/printInterval), "%.3f" % acc, "%.3f" % (time.time() - previous)))
-                previous = time.time()
-                loss = 0
-                
-            scheduler.step()
-            if epoch % lrInterval == 0:
-                print(self.optimizer.state_dict()['param_groups'][0]['lr'])
+                losses_epoch = [0 for _ in range(self.nb_elements)]  # remise à zéro de la liste des loss sur une epoch
+                acc_epoch = []  # remise à zéro de la liste des accuracy sur une epoch
 
-            queue.put(str(epoch) + ":" + str(self.nb_epochs) + ":" + str(time.time() - start))
-            epoch += 1
+                self.optimizer.zero_grad()  # on efface les gradients de l'entraînement précédent
+                err.backward()
+                self.optimizer.step()
+
+                epoch += 1  # incrémentation compteur d'epoch
+                nb_batch = 0  # mise à jout du nb_batch
+                scheduler.step()
+                queue.put(str(epoch) + ":" + str(self.nb_epochs) + ":" + str(time.time() - start))  # envoi des informations d'une epoch
+
+                if epoch % printInterval == 0:
+                    print("{}/{} \t Loss = {} \tPerplexity = {} \tAccuracy = {}% \ttime taken = {}".format(epoch, self.nb_epochs, "%.5f" % err, "%.5f" % exp(err), "%.3f" % acc, "%.3f" % (time.time() - previous)))
+                    previous = time.time()
 
             if not finQueue.empty():
-                info = finQueue.get()
+                info = finQueue.get()  # récupération des informations envoyées à travers la queue
 
-            if epoch == self.nb_epochs+1 or info == "FIN":
-                continu = False
+            if epoch == self.nb_epochs or info == "FIN":
+                continu = False  # conditions de fin d'entraînement
 
-        self.total_epoch += epoch - 1  # mise à jour du total d'epoch
+        self.total_epoch += epoch  # mise à jour du total d'epoch
 
         print("Entraînement fini")
         print("Temps total : ", time.time()-start)
 
-        # x = [k for k in range(epoch-1)]
-        # plt.plot(x, list_loss)
-        # plt.show(block=False)
+        return list_losses, list_acc  # on renvoie la liste des losses et des acc pour chaque epoch
 
     def generate(self, nombre, duree):
         print("Génération des morceaux")
