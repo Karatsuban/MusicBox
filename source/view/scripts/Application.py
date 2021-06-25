@@ -3,7 +3,7 @@
 import tkinter
 import tkinter.filedialog
 from tkinter import messagebox
-from source.view.scripts import Lecteur, Menu, Info
+from source.view.scripts import Lecteur, Menu, Info, GraphDisplay
 from source.controller import TraitementFichiers, ImportExportParametres
 import webbrowser
 import platform
@@ -36,20 +36,23 @@ class Application(tkinter.Tk):
         if osName == "Windows":
             self.dicoTaille = {
                 "Lecteur": "390x295",
-                "Menu": "525x680",
+                "Menu": "525x700",
                 "Info": "300x120",
+                "Graph": "1280x580",
             }
         elif osName == "Darwin":
             self.dicoTaille = {
                 "Lecteur": "410x265",
-                "Menu": "525x680",
+                "Menu": "525x700",
                 "Info": "300x120",
+                "Graph": "1280x580",
             }
         else:
             self.dicoTaille = {
                 "Lecteur": "400x275",
-                "Menu": "600x650",
+                "Menu": "600x670",
                 "Info": "300x120",
+                "Graph": "1280x480",
             }
 
         # Barre de Menu
@@ -61,8 +64,10 @@ class Application(tkinter.Tk):
         self.menuFichier.add_command(label="Charger", command=self.loadModel)
 
         self.menuParam = tkinter.Menu(self.menuBarre, tearoff=0)
-        self.choisiAffichageVar = tkinter.IntVar()
-        self.menuParam.add_checkbutton(label="Affichage Data Info", variable=self.choisiAffichageVar)
+        self.choixAffichageStatistiques = tkinter.IntVar()
+        self.menuParam.add_checkbutton(label="Affichage Statistiques", variable=self.choixAffichageStatistiques)
+        self.choixAffichageGraphiques = tkinter.IntVar()
+        self.menuParam.add_checkbutton(label="Affichage Graphiques loss/acc", variable=self.choixAffichageGraphiques)
 
         self.menuPropos = tkinter.Menu(self.menuBarre, tearoff=0)
         self.menuPropos.add_command(label="À propos", command=about)
@@ -70,7 +75,7 @@ class Application(tkinter.Tk):
         self.menuPropos.add_command(label="GitHub", command=github)
 
         self.menuBarre.add_cascade(label="Modèle", menu=self.menuFichier)  # Menu déroulant "Fichier"
-        self.menuBarre.add_cascade(label="Paramètre", menu=self.menuParam)  # Menu déroulant "Paramètre"
+        self.menuBarre.add_cascade(label="Paramètres", menu=self.menuParam)  # Menu déroulant "Paramètres"
         self.menuBarre.add_cascade(label="À propos", menu=self.menuPropos)  # Menu déroulant "À propos"
 
         self.config(menu=self.menuBarre)
@@ -109,6 +114,7 @@ class Application(tkinter.Tk):
             "Lecteur": Lecteur.Lecteur(self, self.parametres),
             "Menu": Menu.Menu(self, self.parametres, self.format_liste),
             "Info": Info.Info(self),
+            "Graph": GraphDisplay.GraphDisplay(self),
         }
 
         self.frame = self.dicoFrame["Lecteur"]  # frame de base
@@ -154,6 +160,9 @@ class Application(tkinter.Tk):
             is_model = self.dicoFrame["Menu"].is_model
             self.is_saved = False
             self.frame.lanceTrain(self.parametres, is_model)
+        if frame == "Graph":
+            self.frame.grid(padx=0, pady=0, ipadx=0, ipady=0)
+            self.frame.displayFromApp(self.parametres)
 
     def newModel(self):
         if self.dicoFrame["Info"].is_training:  # en cours d'entraînement
@@ -241,7 +250,8 @@ class Application(tkinter.Tk):
                            "NombreDimensionCachee": self.dicoFrame["Menu"].nbDimCachee.get(),
                            "NombreLayer": self.dicoFrame["Menu"].nbLayer.get(),
                            "NombreSequenceBatch": self.dicoFrame["Menu"].nbSeqBatch.get(),
-                           "ChoixAffichageDataInfo": self.choisiAffichageVar.get()
+                           "ChoixAffichageStatistiques": self.choixAffichageStatistiques.get(),
+                           "ChoixAffichageGraphiques": self.choixAffichageGraphiques.get(),
                            }
 
     def getParametres(self):
