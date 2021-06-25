@@ -1,9 +1,9 @@
 # coding:utf-8
 
-import math
 import time
 import tkinter
 import tkinter.font as tkFont
+import matplotlib.pyplot as plt
 from source.controller import TraitementFichiers
 import threading
 import queue
@@ -15,6 +15,9 @@ class Info(tkinter.Frame):
 
         # Couleur de fond
         self.configure(bg='white')
+
+        # paramètres
+        self.parametres = None
 
         # Réglages de la police du titre puis du texte
         self.titre = tkFont.Font(family='Helvetica', size=20)
@@ -29,7 +32,7 @@ class Info(tkinter.Frame):
         # Création du Label affichant le temps restant
         tkinter.Label(self, text="Temps restant estimé : ", bg='white').grid(row=1, column=0)
         self.restant = tkinter.StringVar()
-        self.restant.set("..s")
+        self.restant.set("")
         self.restantLabel = tkinter.Label(self, textvariable=self.restant, bg='white').grid(row=1, column=1)
 
         # bouton pour arrêter l'entrainement
@@ -45,7 +48,8 @@ class Info(tkinter.Frame):
         self.is_training = False
 
     def lanceTrain(self, parametres, is_model):
-        # mettre traitementFichiers dans thread.
+        # lance l'entraînement dans un thread
+        self.parametres = parametres
         self.is_training = True
         self.avancement.set("../..")  # rafraîchissement de l'affichage
         self.restant.set("..s")
@@ -63,7 +67,10 @@ class Info(tkinter.Frame):
 
     def updateEpoch(self):
         if not self.thread.is_alive() and self.queue.empty():
-            self.after(0, self.master.switch_frame("Menu"))
+            if self.parametres["ChoixAffichageGraphiques"] == 1:
+                self.after(0, self.master.switch_frame("Graph"))
+            else:
+                self.after(0, self.master.switch_frame("Menu"))
             self.is_training = False
             return
 
