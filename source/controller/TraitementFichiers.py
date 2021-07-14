@@ -155,7 +155,7 @@ def get_input_liste(parametres):
     nb_notes = 0
     nb_fichiers = 0
 
-    for m in os.listdir(format_path):  # on parcourt tous les fichiers présents dans le répertoir des fichiers format
+    for m in os.listdir(format_path):  # parcourt tous les fichiers présents dans le répertoir des fichiers format
         nb_fichiers += 1
 
         content = lire_fichier(format_path + os.sep + m)  # contenu du fichier
