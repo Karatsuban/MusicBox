@@ -12,7 +12,7 @@ import random
 class RNN:
 
     def __init__(self, input_list, param_list, ensemble_list, load_param=None):
-        self.input_list = input_list                # liste des entree
+        self.input_list = input_list                # liste des entrees
         self.lr = float(param_list[0]) 		        # taux d'apprentissage du RNN
         self.nb_epochs = int(param_list[1])         # nombre de cycles d'entraînement
 
@@ -23,11 +23,13 @@ class RNN:
 
         self.total_epoch = 0                        # nombre total d'epoch depuis la création du modèle
 
-        # définition des dictionaires de notes vers index et inversement
+        # définition des dictionaires de notes vers index et inversement et des marqueurs de début et de fin
         self.list_dict_int2val = [dict(enumerate(k)) for k in ensemble_list]  # liste des dictionnaires de traduction de int vers val
         self.list_dict_val2int = [{val: ind for ind, val in k.items()} for k in self.list_dict_int2val]  # liste des dictionnaires de traduction de val vers int
         self.list_dict_size = [len(k) for k in self.list_dict_val2int]  # liste des taille des dictionnaires
         self.sum_dict_size = sum(self.list_dict_size)  # somme des longueurs de chaque dictionnaire
+        self.bos = input_list[0].split()[0].split(":")[0]  # le premier élément est toujours une note comportant que des BOS
+        self.eos = input_list[-1].split()[-1].split(":")[0]  # le dernier élément est toujours une note comportant que des EOS
 
         # définition des paramètres d'embedding
         self.list_embed_size = []  # liste des tailles des vecteurs d'embedding
@@ -56,15 +58,15 @@ class RNN:
         self.batch_size = 2 ** ceil(log(min(self.batch_size, len(self.input_list)), 2))  # la taille est la puissance de 2 la plus proche du min entre batch_size et le nombre de sequences d'entrée
         # à mettre plus bas (dans le train ?)
 
-        self.device = device_choice()  # choix de l'appareil (CPU/GPU)
+        self.device = device_choice()  # choix de l'appareil utilisé pour l'entraînement (CPU/GPU)
 
         if load_param is not None:
-            # on est en train de charger un RNN
-            self.setParametres(load_param)
+            self.setParametres(load_param)  # on est en train de charger un RNN
         else:
             self.prepare()
 
     def getParametres(self):
+        # renvoie les paramètres du modèle
         parametres = {
             "NombreDimensionCachee": self.hidden_dim,
             "NombreLayer": self.nb_layers,
@@ -84,6 +86,7 @@ class RNN:
         return parametres
 
     def setParametres(self, param):
+        # applique les paramètres au modèle
         try:
             self.total_epoch = param["TotalEpoch"]
         except KeyError:
@@ -108,13 +111,12 @@ class RNN:
 
         self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
         self.optimizer.load_state_dict(param["optimizer_state_dict"])
+        return
 
     def prepare(self):
-
-        # on crée notre embedding
-
+        # création des embeddings, du modèle
         for a in range(self.nb_elements):  # on crée tous les embeddings
-            self.list_embed_size.append(25)  # une taille de 25 pour commencer ?
+            self.list_embed_size.append(ceil(log(self.list_dict_size[a], 2)))  # log du nombre d'éléments dans le dico en base 2
             self.list_embed.append(nn.Embedding(self.list_dict_size[a], self.list_embed_size[a]))
             self.list_embed[a] = self.list_embed[a].to(self.device)  # on passe tous les embeddings sur le device
 
@@ -128,6 +130,7 @@ class RNN:
         self.loss_function = nn.CrossEntropyLoss().to(self.device)
         self.cls = nn.Linear(self.hidden_dim, self.sum_dict_size).to(self.device)
         self.optimizer = torch.optim.Adam(self.lstm.parameters(), lr=self.lr)
+        return
 
     def distribution_pick(self, vecteur):
         # prend un vecteur de probabilités et renvoie un indice après un tirage
@@ -135,24 +138,23 @@ class RNN:
         for a in self.list_dict_size:
             l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
 
-        list_test = [True] * self.nb_elements
+        list_test = [True] * self.nb_elements  # liste utilisée pour vérifier qu'une note générée est correcte
         indices = []
         while list_test.count(True) != 0:
             indices = []
             for idx in range(self.nb_elements):
-                vec = vecteur[0][l_idx[idx]:l_idx[idx+1]]
-                prob = nn.functional.softmax(vec, dim=0).data
-                idx = torch.multinomial(prob, 1).item()
+                vec = vecteur[0][l_idx[idx]:l_idx[idx+1]]  # récupère le bon vecteur de probabilité
+                prob = nn.functional.softmax(vec, dim=0).data  # transformation en vecteur unitaire
+                idx = torch.multinomial(prob, 1).item()  # tirage d'un index dans le vecteur
                 indices.append(idx)
-            list_test = [a == self.list_dict_val2int[k]["&"] for k, a in enumerate(indices)]
-            if list_test.count(True) >= 4:
-                break
+            list_test = [a == self.list_dict_val2int[k][self.eos] for k, a in enumerate(indices)]
+            if list_test.count(True) >= self.nb_elements:
+                break  # si on a autant de marqueurs EOS que d'éléments, on sort de la boucle
         return indices  # on renvoie la liste des indices
 
-    # This function takes in the model and character as arguments and returns the next character prediction and hidden state
-    def predict(self, indexes, para):
+    def predict(self, indexes, parametres):
+        # prend en paramètres les indexes des élements et les paramètres du modèle et prédit la note suivante
         model_input = torch.zeros((1, 1, self.sum_embed_size)).to(self.device)
-        # print("model_input.size() = ", model_input.size())
         char = torch.tensor(indexes).to(self.device)
 
         list_embeddings = [self.list_embed[idx](a) for idx, a in enumerate(char)]  # embedding des éléments de input_index
@@ -163,44 +165,43 @@ class RNN:
 
         model_input[0][0] = embedding
 
-        out, (hidden, cell) = self.lstm(model_input, para)
-        out = self.cls(out).to(self.device)
-        prob = out[0]
-        # prob = nn.functional.softmax(out[0], dim=1).data
+        out, (hidden, cell) = self.lstm(model_input, parametres)  # récupération du vecteur de probabilité des éléments de la nouvelle note
+        out = self.cls(out).to(self.device)  # on met le vecteur sur le bon device
+        prob = out[0]  # on récupère le vecteur de probabilité
 
-        char_ind = [self.list_dict_val2int[k]["@"] for k in range(self.nb_elements)]  # indices du BOS
+        char_ind = []  # self.list_dict_val2int[k][self.bos] for k in range(self.nb_elements)]  # indices du BOS
         fin = False
         while not fin:  # tant qu'on trouve un BOS, on recommence
-            char_ind = self.distribution_pick(prob)
-            test_list = [char_ind[k] != self.list_dict_val2int[k]["@"] for k in range(self.nb_elements)]
-            fin = False not in test_list
+            char_ind = self.distribution_pick(prob)  # on récupère les nouveaux indices des éléments de la note suivante
+            test_list = [char_ind[k] != self.list_dict_val2int[k][self.bos] for k in range(self.nb_elements)]  # on teste la présence de marqueurs de début
+            fin = False not in test_list  # s'il n'y a pas de marqueur de début, on peut sortir de la boucle
 
         return char_ind, (hidden, cell)
 
-    # This function takes the desired output length and input characters as arguments, returning the produced sentence
     def sample(self, max_len):
-        self.lstm.eval()  # eval mode
-        # First off, run through the starting characters
+        # renvoie une séquence d'une longueur maximale longueur max_len
+        self.lstm.eval()  # mode d'évaluation du modèle
         chars = []
         while not chars:  # tant que chars est vide (pour éviter de renvoyer un morceau généré vide)
-            model_input = [self.list_dict_val2int[k]["@"] for k in range(self.nb_elements)]  # indices des BOS
+            model_input = [self.list_dict_val2int[k][self.bos] for k in range(self.nb_elements)]  # note composée uniquement de marqueurs BOS
 
-            hidden = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
+            hidden = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)  # création du vecteur caché
             cell = torch.zeros(self.nb_layers, 1, self.hidden_dim).to(self.device)
-            # Now pass in the previous characters and get a new one
+
             for ii in range(max_len):
-                modele_output, (hidden, cell) = self.predict(model_input, (hidden, cell))
-                list_test = [modele_output[k] == self.list_dict_val2int[k]["&"] for k in range(self.nb_elements)]  # on vérifie l'égalité de chaque indice avec l'indice de EOS
+                modele_output, (hidden, cell) = self.predict(model_input, (hidden, cell))  # on prédit la note suivante
+                list_test = [modele_output[k] == self.list_dict_val2int[k][self.eos] for k in range(self.nb_elements)]  # on vérifie l'égalité de chaque indice avec l'indice de EOS
                 if True in list_test:
                     break  # au moins un EOS a été généré, on arrête le morceau
                 else:
                     note = ":".join([self.list_dict_int2val[k][modele_output[k]] for k in range(self.nb_elements)])
                     chars.append(note)
-                model_input = modele_output
+                model_input = modele_output  # la nouvelle note générée est la nouvelle entrée du modèle
 
         return ' '.join(chars)
 
     def pick_batch(self):
+        # sélectionne des séquences parmi toutes les séquences d'entraînement
         L = []
         to_pick = self.batch_size
         is_epoch = False
@@ -221,7 +222,8 @@ class RNN:
         return L, is_epoch  # on renvoie les séquences
 
     def train(self, nb_epochs, batch_size, queue, finQueue):
-        self.lstm.train()
+        # fonction permettant au modèle de s'entraîner
+        self.lstm.train()  # mode d'entraînement
         print("Début de l'Entraînement")
 
         self.nb_epochs = nb_epochs
@@ -242,20 +244,20 @@ class RNN:
         for a in self.list_dict_size:
             l_idx.append(l_idx[-1] + a)  # on crée la liste des indexes de début et de fin des chaque vecteur
             
-        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lrInterval, gamma=0.99)
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=lrInterval, gamma=0.99)  # permet de mettre à jour le learning rate
 
         start = time.time()
         previous = start
 
         # Boucle d'entraînement
         while continu:
-            batch_seq, is_epoch = self.pick_batch()  # on récupère les séquences de batch et un booléen pour savvoir si on a fini une epoch
+            batch_seq, is_epoch = self.pick_batch()  # on récupère les séquences de batch et un booléen pour savoir si on a fini une epoch
             nb_batch += 1
             target_seq = []
 
-            lengths = [len(s)-1 for s in batch_seq]
-            input_tensor = torch.zeros((len(batch_seq), max(lengths), self.sum_embed_size), dtype=torch.float).to(self.device)
-            target2_tensor = torch.zeros((sum(lengths), self.sum_dict_size), dtype=torch.float).to(self.device)
+            lengths = [len(s)-1 for s in batch_seq]  # liste des longueurs des séquences
+            input_tensor = torch.zeros((len(batch_seq), max(lengths), self.sum_embed_size), dtype=torch.float).to(self.device)  # création du vecteur input
+            target2_tensor = torch.zeros((sum(lengths), self.sum_dict_size), dtype=torch.float).to(self.device)  # création du vecteur target pour calculer l'erreur
 
             num_note = 0
 
@@ -271,7 +273,7 @@ class RNN:
                         list_notes_decomp.append(decomp)
                         
                         for i, k in enumerate(decomp):
-                            target2_tensor[num_note, l_idx[i]+k] = 1
+                            target2_tensor[num_note, l_idx[i]+k] = 1  # on rajoute un "1" dans chaque vecteur unitaire
                         num_note += 1
                                            
                 target_seq += list_notes_decomp
@@ -279,14 +281,14 @@ class RNN:
             target_seq = [list(a) for a in zip(*target_seq)]  # création d'une liste de "nb_elements" elements contenant chacun tous les index de leur élément de chaque note associé
             tensor_target = torch.tensor(target_seq).to(self.device)
 
-            packed_input = nn.utils.rnn.pack_padded_sequence(input_tensor, lengths, batch_first=True, enforce_sorted=False).to(self.device)
-            h0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)
+            packed_input = nn.utils.rnn.pack_padded_sequence(input_tensor, lengths, batch_first=True, enforce_sorted=False).to(self.device)  # on pack les séquences
+            h0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)  # vecteur hidden et cell initiaux
             c0 = torch.zeros(self.nb_layers, self.batch_size, self.hidden_dim).to(self.device)
-            packed_out, _ = self.lstm(packed_input, (h0, c0))
-            out, input_sizes = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
+            packed_out, _ = self.lstm(packed_input, (h0, c0))  # récupération de la prédiction du modèle
+            out, input_sizes = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)  # on dépack la sortie
 
-            out = torch.cat([out[i, :l] for i, l in enumerate(lengths)])
-            out = self.cls(out)
+            out = torch.cat([out[i, :l] for i, l in enumerate(lengths)])  # on récupère seulement des parties des séquences de sorties de même longueur que leurs séquences d'entrées correspondantes
+            out = self.cls(out)  # passage par la couche linéaire (changement de dimension)
 
             out_cut = []
             for idx in range(self.nb_elements):
@@ -294,7 +296,7 @@ class RNN:
                 elem_tensor = nn.functional.softmax(torch.index_select(out, 1, indexes), dim=1)  # on récupère la bonne partie du tenseur qu'on ajoute à la liste
                 out_cut.append(elem_tensor)
                 out.index_copy_(1, indexes, elem_tensor)
-            acc = 100 * (1 - (out - target2_tensor).pow(2).sum()/(self.nb_elements*sum(lengths))).float()
+            acc = 100 * (1 - (out - target2_tensor).pow(2).sum()/(self.nb_elements*sum(lengths))).float()  # calcul de la précision du modèle
             acc_epoch.append(acc)  # ajout de l'accuracy du batch à la liste des accuracy sur une epoch
 
             l_err = [self.loss_function(out_cut[k], tensor_target[k]).to(self.device) for k in range(self.nb_elements)]   # calcul de la loss pour chaque élément d'une note
@@ -313,8 +315,8 @@ class RNN:
                 acc_epoch = []  # remise à zéro de la liste des accuracy sur une epoch
 
                 self.optimizer.zero_grad()  # on efface les gradients de l'entraînement précédent
-                err.backward()
-                self.optimizer.step()
+                err.backward()  # propagation de l'erreur
+                self.optimizer.step()  # étape de l'optimiseur
 
                 epoch += 1  # incrémentation compteur d'epoch
                 nb_batch = 0  # mise à jout du nb_batch
@@ -339,8 +341,8 @@ class RNN:
         return list_losses, list_acc  # on renvoie la liste des losses et des acc pour chaque epoch
 
     def generate(self, nombre, duree):
+        # génère "nombre" séquences de durées maximales "durée"
         print("Génération des morceaux")
-        # on retourne le résultat sous la forme d'une liste
         out = []
         for a in range(nombre):
             out.append(self.sample(duree))
@@ -354,7 +356,7 @@ class RNN:
 
 def training_file_number_choice(total):
     # retourne le nombre de fichiers qui seront utilisés pour l'entrainement du RNN mais pas pour les tests
-    return ceil(total * 90/100)  # 80% des fichiers sont utilisés pour l'entraînement
+    return ceil(total * 90/100)  # 90% des fichiers sont utilisés pour l'entraînement
 
 
 def training_file_choice(liste, nb):
@@ -367,10 +369,9 @@ def training_file_choice(liste, nb):
 
 
 def device_choice():
-    # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
+    # renvoie l'appareil le plus adapté pour l'entraînement (GPU si disponible, sinon CPU)
     is_cuda = torch.cuda.is_available()
 
-    # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
     if is_cuda:
         device = torch.device("cuda")
         print("GPU is available")
