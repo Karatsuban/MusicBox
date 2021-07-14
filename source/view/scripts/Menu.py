@@ -2,7 +2,7 @@
 
 import tkinter
 import tkinter.filedialog
-import tkinter.font as tkFont
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox
 from source.controller import TraitementFichiers, ImportExportParametres
 import os
@@ -11,28 +11,23 @@ import os
 hauteurBout = 2
 
 
-#######################################################
-# Classe du menu de l'interface
-#######################################################
-
-
 class Menu(tkinter.Frame):
 
-    def __init__(self, master, parametres, format_liste):
+    def __init__(self, master, parametres, dico_formats):
         tkinter.Frame.__init__(self, master)
 
-        # Réglage police du titre et du texte
-        self.policeTitre = tkFont.Font(family='Helvetica', size=20)
-        self.PoliceTexte = tkFont.Font(family='Helvetica', size=13)
-        # Réglage police combobox
-        master.option_add("*Font", "Helvetica 13")
-        # Réglage arrière plan
-        self.configure(bg='white')
+        self.policeTitre = tkfont.Font(family='Helvetica', size=20)  # Réglage police du titre et du texte
+        self.PoliceTexte = tkfont.Font(family='Helvetica', size=13)
+
+        self.configure(bg='white')  # Réglage arrière plan
 
         self.parametres = parametres  # paramètres par défaut
-        self.format_liste = format_liste  # liste des formats disponibles
+        self.dico_formats = dico_formats  # dictionnaire des formats disponibles par défaut
+        self.format_liste = [key for key, _ in self.dico_formats.items()]  # nom des formats
 
         self.is_model = False  # aucun modèle n'a été crée ou chargé
+
+        self.dico_formats = {}  # dictionnaire contenant les formats existants
 
         # --------- Configuration ------------ #
 
@@ -88,16 +83,17 @@ class Menu(tkinter.Frame):
         # Choix du type de génération
         tkinter.Label(self, text="Type de génération", width=15, height=hauteurBout, font=self.PoliceTexte, bg='white').grid(row=6, column=0, sticky="W")
         # Création de la combobox de Choix de generation
-        self.typeGenComboboite = tkinter.ttk.Combobox(self, values=self.format_liste, state="readonly")
-        # Réglage de l'item actuel sur 1
-        self.typeGenComboboite.current(1)
+        self.typeGenComboboite = ttk.Combobox(self, values=self.format_liste, state="readonly")
+        self.typeGenComboboite.current(0)  # sélection du premier élément
         # Placement
         self.typeGenComboboite.grid(row=6, column=1, sticky="W")
 
+        self.createFormatButton = tkinter.Button(self, text="Créer nouveau format", width=30, bg="white", command=lambda: [self.master.switch_frame("Format")])
+        self.createFormatButton.grid(row=7, column=0, columnspan=2, sticky="W")
+
         # --------- Choix avancés ------------ #
         # Création et placement du titre choix avancés
-        tkinter.Label(self, text="Choix avancés", bg='white', font=self.policeTitre).grid(row=7, column=0, sticky="W")
-        tkinter.Label(self, text="Non recommandé", bg='white', font=self.PoliceTexte).grid(row=8, column=0, sticky="W")
+        tkinter.Label(self, text="Choix avancés", bg='white', font=self.policeTitre).grid(row=8, column=0, sticky="W")
         # Bouton pour (dés)activer les choix avancés
         self.paramsAvancesValue = 0  # désactivé
         self.paramsAvancesBouton = tkinter.Button(self, text="Activer les paramètres avancés", width=30, bg="white", command=lambda: [self.changeInterface()])
@@ -165,26 +161,40 @@ class Menu(tkinter.Frame):
         self.saveParamsButton.grid(row=17, column=0, sticky="W")
 
         # bouton pour générer d'autres morceaux
-        self.genParamsButton = tkinter.Button(self, text="Générer morceaux", state=tkinter.DISABLED, width=20, bg="white", command=lambda: [self.genereNewMorceau(master)])
+        self.genParamsButton = tkinter.Button(self, text="Générer morceaux", state=tkinter.DISABLED, width=20, bg="white", command=lambda: [self.genereNewMorceau()])
         self.genParamsButton.grid(row=17, column=1, sticky="E")
 
         # bouton pour passer à la fenêtre de visualisation des graphiques
         self.accesGraphButton = tkinter.Button(self, text="Accès au graphiques", width=20, bg="white", command=lambda: [self.master.switch_frame("Graph")])
         self.accesGraphButton.grid(row=18, column=0, sticky="W")
 
-    def genereNewMorceau(self, master):
-        if self.valide():
+    def fromApp(self):
+        # fonction appelée lors d'un changement de frame
+        new_formats = ImportExportParametres.importFormat()  # récupération des formats
+        if new_formats is not None:  # si d'autres formats que ceux de base ont été chargés
+            for a in new_formats:
+                self.dico_formats[a] = new_formats[a]  # on ajoute les nouveaux formats
+        self.format_liste = [key for key, _ in self.dico_formats.items()]  # on récupère les noms des nouveaux formats
+        self.typeGenComboboite["values"] = self.format_liste  # ...pour l'affichage
+        return
+
+    def genereNewMorceau(self):
+        # fonction appelée pour générer de nouveaux morceaux
+        if self.valide():  # si les paramètres entrés sont corrects
             self.parametres = self.master.getParametres()
-            TraitementFichiers.genereMorceaux(self.parametres)
-            master.switch_frame("Lecteur")
+            TraitementFichiers.genereMorceaux(self.parametres)  # on génère les morceaux
+            self.master.switch_frame("Lecteur")  # changement de la vue vers le Lecteur
         return
 
     def exportParametres(self):
-        self.parametres = self.master.getParametres()
-        ImportExportParametres.exportInCSV(self.parametres)
+        # fonction appelée pour enregistrer les paramètres
+        self.parametres = self.master.getParametres()  # récupération des paramètres
+        ImportExportParametres.exportInCSV(self.parametres)  # enregistrement des paramètres
+        return
 
     def changeInterface(self):
-        if self.paramsAvancesValue == 0:  # Enable everyone
+        # fonction appelée pour activer et désactiver les paramètres avancés
+        if self.paramsAvancesValue == 0:  # ctivation des paramètres
             self.paramsAvancesValue = 1
             self.paramsAvancesBouton.config(text="Désactiver les paramètres avancés")
             self.txApprentissage["state"] = tkinter.NORMAL
@@ -194,7 +204,7 @@ class Menu(tkinter.Frame):
                 self.nbDimCachee["state"] = tkinter.NORMAL
                 self.nbLayer["state"] = tkinter.NORMAL
 
-        elif self.paramsAvancesValue == 1:  # Disable everyone
+        elif self.paramsAvancesValue == 1:  # désactivation des paramètres
             self.paramsAvancesValue = 0
             self.paramsAvancesBouton.config(text="Activer les paramètres avancés")
             self.txApprentissage["state"] = tkinter.DISABLED
@@ -202,8 +212,10 @@ class Menu(tkinter.Frame):
             self.nbDimCachee["state"] = tkinter.DISABLED
             self.nbLayer["state"] = tkinter.DISABLED
             self.nbSeqBatch["state"] = tkinter.DISABLED
+        return
 
     def valide(self):
+        # méthode appelée pour vérifier que les paramètres sont corrects
         valide = True
         if "." in self.nbMorceaux.get() or int(float(self.nbMorceaux.get())) > 200 or int(float(self.nbMorceaux.get())) < 1:
             valide = False
@@ -225,10 +237,11 @@ class Menu(tkinter.Frame):
         return valide
 
     def charging(self):
-        if self.valide():
-            if not self.is_model:
-                self.genParamsButton["state"] = tkinter.NORMAL
-                self.openFolderButton["state"] = tkinter.DISABLED
+        # fonction appelée pour entraîner le modèle
+        if self.valide():  # si les paramètres sont valides
+            if not self.is_model:  # s'il n'y a pas de modèle en cours
+                self.genParamsButton["state"] = tkinter.NORMAL  # on active le bouton de génération de morceaux
+                self.openFolderButton["state"] = tkinter.DISABLED  # on désactive d'autres widgets
                 self.typeGenComboboite["state"] = tkinter.DISABLED
 
             self.master.saveParametres()
@@ -237,51 +250,31 @@ class Menu(tkinter.Frame):
                 self.nbDimCachee["state"] = tkinter.DISABLED
                 self.nbLayer["state"] = tkinter.DISABLED
 
-            self.master.switch_frame("Info")
+            self.master.switch_frame("Info")  # switch vers la fenêtre de chargement
             self.is_model = True
         return
 
-    # Méthode pour l'explorateur de fichier
     def Browser(self):
-        filename = tkinter.filedialog.askdirectory().replace("/", os.sep)
-        if filename == "":
-            self.urlVar.set(self.urlVar.get())
-        else:
-            if verifMIDI(filename):
-                self.urlVar.set(filename)
-                muchFileWarning(filename)
+        # Méthode pour le choix du dossier contenant les fichiers midi
+        filename = tkinter.filedialog.askdirectory().replace("/", os.sep)  # chemin du dossier
+        if filename != "":  # si le chemin n'est pas vide
+            if verifMIDI(filename):  # on vérifie qu'il y a des .mid dans le dossier
+                self.urlVar.set(filename)  # affichage du chemin
+                muchFileWarning(filename)  # alerte s'il y a beaucoup de fichiers
             else:
-                tkinter.messagebox.showerror('Erreur', "Il y a pas de fichier .mid dans ce dossier!\nChemin va être remplacé par défault.")
-                self.urlVar.set(self.urlVar.get())
+                tkinter.messagebox.showerror('Erreur', "Il y a pas de fichier .mid dans ce dossier!")
+        return
 
 
 def muchFileWarning(path):
-    nb = len(os.listdir(path))
+    # Fonction prévenant l'utilisateur s'il y a beaucoup de fichiers dans le dossier choisi
+    nb = len([file for file in os.listdir(path) if ".mid" in file])
     if nb > 500:
         tkinter.messagebox.showinfo('MuchFilesWarning', "Nombre de fichier .mid détecté est > 500\n Ignorez ce message si vous avez une mémoire suffisante.")
+    return
 
 
-# Verifier si fichiers .mid existe dans le dossier choisi.
 def verifMIDI(path):
-    files = os.listdir(path)
-    for k in range(len(files)):
-        files[k] = os.path.splitext(files[k])[1]
-
-    extention = '.mid'
-    if extention in files:
-        return True
-    else:
-        return False
-
-
-def geoliste(g):
-    # Récupère les infos relatives à l'écran
-    r = [i for i in range(0, len(g)) if not g[i].isdigit()]
-    return [int(g[0:r[0]]), int(g[r[0] + 1:r[1]]), int(g[r[1] + 1:r[2]]), int(g[r[2] + 1:])]
-
-
-def centrefenetre(fen):
-    # Fonctions pour centrer la fenêtre au milieu de l'écran
-    fen.update_idletasks()
-    l, h, x, y = geoliste(fen.geometry())
-    fen.geometry("%dx%d%+d%+d" % (l, h, (fen.winfo_screenwidth() - l) // 2, (fen.winfo_screenheight() - h) // 2))
+    # Vérification de la présence de fichiers .mid dans le dossier
+    files = [file for file in os.listdir(path) if ".mid" in file]  # liste des fichiers .mid dans le dossier choisi
+    return len(files) != 0  # True si la liste n'est pas vide
