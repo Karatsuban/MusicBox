@@ -275,7 +275,7 @@ class OneLineClient:
               "stat\t\t\t\t\tPour afficher des statistiques sur les donnees d'entrainement\n"
               "params\t\t\t\t\tPour afficher les parametres\n"
               "help\t\t\t\t\tPour afficher cette aide\n"
-              "update\t\t\t\t\tPour verifier l'installation des packages"
+              "update\t\t\t\t\tPour verifier l'installation des packages\n"
               "credits\t\t\t\t\tPour afficher les credits de l'application\n"
               "-----------------------------------------------------------\n")
         return
