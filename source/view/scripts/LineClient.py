@@ -220,8 +220,10 @@ class OneLineClient:
 
     def launch(self):
         # effectue toutes les actions demandées par l'utilisateur
+        if self.user_param["credits"]:
+            credits_about()  # affichage des credits
+        
         if self.user_param["update"]:
-            print("HERE")
             Install.installByOS("LineClient")  # vérifie l'installation
 
         if self.user_param["help"]:
