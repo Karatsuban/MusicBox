@@ -76,9 +76,9 @@ class Application(tkinter.Tk):
         self.config(menu=self.menuBarre)
 
         self.dico_formats = {'Melodie': {'NomFormat': 'Melodie', 'NombreElements': '4', 'FracNote': '0', 'FusionPiste': '1', 'EncodeSilences': '0', 'DecoupeMesure': '10',
-                                         'ListeTypesElements': "['IIN', 'TN', 'TN', 'PM']"},
+                                         'ListeTypesElements': ['IIN', 'TN', 'TN', 'PM']},
                              'Rythme': {'NomFormat': 'Rythme', 'NombreElements': '1', 'FracNote': '0', 'FusionPiste': '1', 'EncodeSilences': '1', 'DecoupeMesure': '20',
-                                        'ListeTypesElements': "['TN']"}
+                                        'ListeTypesElements': ['TN']}
                              }  # formats disponibles par défaut
 
         format_names = [key for key, _ in self.dico_formats.items()]  # liste des noms de formats disponibles par défaut
