@@ -16,9 +16,9 @@ class OneLineClient:
         self.list_param = None
         self.user_param = None
         self.dico_formats = {'Melodie': {'NomFormat': 'Melodie', 'NombreElements': '4', 'FracNote': '0', 'FusionPiste': '1', 'EncodeSilences': '0', 'DecoupeMesure': '10',
-                                         'ListeTypesElements': "['IIN', 'TN', 'TN', 'PM']"},
+                                         'ListeTypesElements': ['IIN', 'TN', 'TN', 'PM']},
                              'Rythme': {'NomFormat': 'Rythme', 'NombreElements': '1', 'FracNote': '0', 'FusionPiste': '1', 'EncodeSilences': '1', 'DecoupeMesure': '20',
-                                        'ListeTypesElements': "['TN']"}
+                                        'ListeTypesElements': ['TN']}
                              }  # formats disponibles par défaut
         self.format_liste = None  # nom des formats
         self.update_formats()  # mise à jour des formats existants depuis le fichier de sauvegarde des formats
@@ -66,7 +66,8 @@ class OneLineClient:
             "graph": ["BOOL"],
             "stat": ["BOOL"],
             "params": ["BOOL"],
-            "update": ["BOOL"]
+            "update": ["BOOL"],
+            "credits": ["BOOL"],
         }  # dictionnaire des types, limites/valeurs possibles par paramètre
 
         self.user_param = {
@@ -80,12 +81,13 @@ class OneLineClient:
             "stat": False,
             "params": False,
             "update": False,
-        }  # paramètres de sauvegarde, chargement, generation de morceaux, graphes et/ou statistiques, statistiques, parametres, aide et mise à jour
+            "credits": False,
+        }  # paramètres de sauvegarde, chargement, generation de morceaux, graphes et/ou statistiques, statistiques, parametres, aide, mise à jour et credits
         return
 
     def parse_param(self):
         # parcourt les parametres entres par l'utilisateur et enregistre les valeurs dans les bons parametres
-        for param in ["help", "stat", "graph", "generate", "params", "update"]:
+        for param in ["help", "stat", "graph", "generate", "params", "update", "credits"]:
             if param in self.args:
                 self.args[self.args.index(param)] = param+"=True"  # les paramètres qui ne prennent pas de valeurs sont mis à True
 
@@ -272,6 +274,7 @@ class OneLineClient:
               "params\t\t\t\t\tPour afficher les parametres\n"
               "help\t\t\t\t\tPour afficher cette aide\n"
               "update\t\t\t\t\tPour verifier l'installation des packages"
+              "credits\t\t\t\t\tPour afficher les credits de l'application\n"
               "-----------------------------------------------------------\n")
         return
 
@@ -287,3 +290,11 @@ def start(args):
     print("Client lancé")
     OneLineClient(args)
     return
+
+
+def credits_about():
+    # affiche des informations sur l'application et ses développeurs
+    print("\nApplication créée par:\n---------------------\n- Antoine Escriva\n- Florian Bossard\n- Clément Guérin\n- Raphaël Garnier\n- Clément Bruschini\n\nRepris par:\n---------------------\n- Yunfei Jia\n- Raphaël Garnier")
+    print("Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\n---------------------\nVersion 3.0.0, 2021")
+    print("https://github.com/Karatsuban/MusicBox\n")
+    print("======================================================================\n")
