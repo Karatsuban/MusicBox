@@ -297,6 +297,6 @@ def start(args):
 def credits_about():
     # affiche des informations sur l'application et ses développeurs
     print("\nApplication créée par:\n---------------------\n- Antoine Escriva\n- Florian Bossard\n- Clément Guérin\n- Raphaël Garnier\n- Clément Bruschini\n\nRepris par:\n---------------------\n- Yunfei Jia\n- Raphaël Garnier")
-    print("Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\n---------------------\nVersion 3.0.0, 2021")
+    print("Application développée dans le cadre de la matière Conduite et gestion de projet en 2ème année du cycle Ingénieur à Sup Galilée.\nApplication poursuivie en stage du 03/05/2021 au 02/07/21\n---------------------\nVersion 4.0.0, 2021")
     print("https://github.com/Karatsuban/MusicBox\n")
     print("======================================================================\n")
