@@ -163,7 +163,7 @@ class Menu(tkinter.Frame):
         self.genParamsButton.grid(row=17, column=1, sticky="E")
 
         # bouton pour passer à la fenêtre de visualisation des graphiques
-        self.accesGraphButton = tkinter.Button(self, text="Accès au graphiques", width=20, bg="white", command=lambda: [self.master.switch_frame("Graph")])
+        self.accesGraphButton = tkinter.Button(self, text="Accès graphiques", width=20, bg="white", command=lambda: [self.master.switch_frame("Graph")])
         self.accesGraphButton.grid(row=18, column=0, sticky="W")
 
     def fromApp(self):
