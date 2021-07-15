@@ -290,7 +290,7 @@ def about_fen():
     # affiche une fenêtre avec quelques informations
     tkinter.messagebox.showinfo("À propos",
                                 "Application développée dans le cadre de la matière Conduite et Gestion de Projet en 2ème année du cycle Ingénieur à Sup Galilée.\n"
-                                "Application poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 2.0.0, 2021")
+                                "Application poursuivie en stage du 03/05/2021 au 02/07/21\nVersion 3.0.0, 2021")
     return
 
 
