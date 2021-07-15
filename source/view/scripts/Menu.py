@@ -27,8 +27,6 @@ class Menu(tkinter.Frame):
 
         self.is_model = False  # aucun modèle n'a été crée ou chargé
 
-        self.dico_formats = {}  # dictionnaire contenant les formats existants
-
         # --------- Configuration ------------ #
 
         # Création et placement du titre du cadre
